@@ -20,6 +20,8 @@ nav button.on{background:var(--acc);color:#07121f;font-weight:600}
 .row{display:flex;gap:4px}
 .row button{flex:1;min-width:0;padding:13px 0;border:0;border-radius:6px;background:var(--btn);color:inherit;font:inherit;font-size:14px}
 .row button.on{background:var(--acc);color:#07121f}
+.row.scroll{overflow-x:auto;touch-action:pan-x}
+.row.scroll button{flex:0 0 62px;touch-action:pan-x}
 #v-set{flex-direction:column;padding:16px;gap:16px;overflow:auto;touch-action:pan-y}
 #v-set label{display:flex;flex-direction:column;gap:6px}
 #v-set input{width:100%;touch-action:auto}
@@ -42,7 +44,7 @@ body.edit .c{outline:2px dashed var(--warn)}
 <div id="stw"><span id="st"></span><span id="stt">Reconnecting</span></div>
 <nav><button data-v="pad" class="on">Touchpad</button><button data-v="kb">Keyboard</button><button data-v="gp">Controller</button><button data-v="set">Pengaturan</button></nav>
 <section class="view on" id="v-pad"><div id="pad">1 jari: geser = kursor, tap = klik kiri, tahan lalu geser = drag<br>2 jari: tap = klik kanan, geser = scroll, pinch = zoom<br>3 jari: tap = klik tengah, geser = Alt+Tab<br>4 jari: tap = tampilkan desktop, geser = ganti desktop</div></section>
-<section class="view" id="v-kb"><textarea id="txt" rows="2" placeholder="Ketik di sini, langsung muncul di PC"></textarea><div id="keys"></div></section>
+<section class="view" id="v-kb"><div id="keys"></div><textarea id="txt" rows="3" placeholder="Ketuk di sini lalu ketik dengan keyboard HP, langsung muncul di PC" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea></section>
 <section class="view" id="v-gp"><div id="gp"><div id="gpbar"><button id="bEdit">Atur tata letak</button><button id="bExit">Keluar</button></div></div></section>
 <section class="view" id="v-set"></section>
 </div>
@@ -143,29 +145,31 @@ pad.addEventListener('touchend',e=>{
 },{passive:false});
 pad.addEventListener('touchcancel',()=>{if(T){clearTimeout(T.lp);if(T.drag)send({t:'up',b:'l'});T=null}});
 
-/* ---- keyboard ---- */
-const mods=new Set(),ROWS={abc:['qwertyuiop','asdfghjkl','zxcvbnm'],sym:['1234567890','-/:;()$&@"',".,?!'=+*#"]};
-let layer='abc',prev='';
+/* ---- keyboard: ketik pakai keyboard HP, tombol laptop di bar atas ---- */
+const mods=new Set(),tx=$('#txt');let prev='';
 const R=(...bs)=>{const d=document.createElement('div');d.className='row';d.append(...bs);return d};
-const B=(lb,fn,on,fx)=>{const b=document.createElement('button');b.textContent=lb;if(on)b.className='on';if(fx)b.style.flex=fx;b.onclick=fn;return b};
+const B=(lb,fn,on)=>{const b=document.createElement('button');b.textContent=lb;if(on)b.className='on';
+  b.onmousedown=b.onpointerdown=e=>e.preventDefault(); // jaga fokus agar keyboard HP tidak menutup
+  b.onclick=fn;return b};
 function key(k){send({t:'keys',k:[...mods,k]});if(mods.size){mods.clear();drawKeys()}}
+const K=(lb,k)=>B(lb,()=>key(k));
 function drawKeys(){
-  const box=$('#keys'),up=mods.has('shift');box.replaceChildren();
+  const box=$('#keys');box.replaceChildren();
   box.append(R(...['ctrl','alt','shift','win'].map(m=>B(m[0].toUpperCase()+m.slice(1),()=>{mods.has(m)?mods.delete(m):mods.add(m);drawKeys()},mods.has(m)))));
-  ROWS[layer].forEach((r,i)=>{
-    const bs=[...r].map(c=>B(up&&layer==='abc'?c.toUpperCase():c,()=>key(c)));
-    if(i===2)bs.push(B('⌫',()=>key('backspace'),0,1.5));box.append(R(...bs));
-  });
-  box.append(R(B('Esc',()=>key('esc')),B('Tab',()=>key('tab')),B('Spasi',()=>key('space'),0,3),B('Enter',()=>key('enter')),B(layer==='abc'?'123':'ABC',()=>{layer=layer==='abc'?'sym':'abc';drawKeys()})));
-  box.append(R(...[['←','left'],['↑','up'],['↓','down'],['→','right']].map(([l,k])=>B(l,()=>key(k)))));
-  box.append(R(...[['Ctrl+C',['ctrl','c']],['Ctrl+V',['ctrl','v']],['Ctrl+X',['ctrl','x']],['Ctrl+Z',['ctrl','z']],['Ctrl+A',['ctrl','a']],['Alt+Tab',['alt','tab']]].map(([l,k])=>B(l,()=>keys(k)))));
-  box.append(R(B('Bersihkan kolom teks',()=>{$('#txt').value='';prev=''})));
+  box.append(R(K('Esc','esc'),K('Tab','tab'),K('Start','win'),K('⌫','backspace'),K('Del','delete'),K('Enter','enter')));
+  box.append(R(K('←','left'),K('↑','up'),K('↓','down'),K('→','right'),K('Home','home'),K('End','end')));
+  const f=R(...Array.from({length:12},(_,i)=>K('F'+(i+1),'f'+(i+1))),K('PgUp','pageup'),K('PgDn','pagedown'),K('PrtSc','printscreen'));
+  f.classList.add('scroll');box.append(f);
 }
-$('#txt').addEventListener('input',()=>{ // kirim selisih ketikan secara real-time
-  const v=$('#txt').value;let i=0;
+tx.addEventListener('input',()=>{ // kirim selisih ketikan secara real-time
+  const v=tx.value;let i=0;
   while(i<prev.length&&i<v.length&&prev[i]===v[i])i++;
   const del=prev.length-i,add=v.slice(i);
+  if(mods.size&&!del&&add.length===1&&add!=='\n'){ // modifier aktif + 1 huruf = kombinasi (mis. Ctrl lalu c)
+    send({t:'keys',k:[...mods,add.toLowerCase()]});mods.clear();drawKeys();tx.value=prev;return;
+  }
   if(del)send({t:'bs',n:del});if(add)send({t:'text',s:add});prev=v;
+  if(v.length>500){tx.value='';prev=''}
 });
 
 /* ---- controller ---- */
