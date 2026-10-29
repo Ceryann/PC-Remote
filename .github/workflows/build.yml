@@ -32,10 +32,16 @@ jobs:
           $pkg = Get-ChildItem vg -Recurse -Directory -Filter vgamepad | Select-Object -First 1
           $site = python -c "import site; print(site.getsitepackages()[0])"
           Copy-Item $pkg.FullName "$site\vgamepad" -Recurse
-          python -c "import vgamepad; print('vgamepad OK')"
+          # Jangan di-import di sini: vgamepad butuh driver ViGEmBus saat di-import.
+          $dll = Get-ChildItem "$site\vgamepad" -Recurse -Filter ViGEmClient.dll
+          if (-not $dll) { throw "ViGEmClient.dll tidak ditemukan di paket vgamepad" }
+          $dll | ForEach-Object { Write-Host "Ditemukan: $($_.FullName)" }
 
       - name: Bungkus jadi satu .exe
-        run: pyinstaller --onefile --name PCRemote --add-data "index.html;." --collect-all vgamepad --collect-submodules uvicorn server.py
+        shell: pwsh
+        run: |
+          $site = python -c "import site; print(site.getsitepackages()[0])"
+          pyinstaller --onefile --name PCRemote --add-data "index.html;." --add-data "$site\vgamepad;vgamepad" --collect-submodules uvicorn server.py
 
       - uses: actions/upload-artifact@v4
         with:
