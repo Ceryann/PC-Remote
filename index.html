@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>PC Remote</title>
+<style>
+:root{--bg:#101215;--card:#1a1d22;--btn:#272b33;--acc:#5aa2ff;--ok:#3ddc84;--warn:#ffb020;--bad:#ff5c5c;--u:1}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;touch-action:none}
+html,body{margin:0;height:100%;background:var(--bg);color:#e6e8eb;font:15px system-ui,sans-serif;overflow:hidden;overscroll-behavior:none}
+#app{display:flex;flex-direction:column;height:100%}
+#stw{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:13px;background:var(--card)}
+#st{width:10px;height:10px;border-radius:50%;background:var(--bad)}
+nav{display:flex;gap:6px;padding:6px;background:var(--card)}
+nav button{flex:1;padding:11px 2px;border:0;border-radius:8px;background:var(--btn);color:inherit;font:inherit}
+nav button.on{background:var(--acc);color:#07121f;font-weight:600}
+.view{display:none;flex:1;min-height:0}.view.on{display:flex}
+#pad{flex:1;margin:8px;border-radius:14px;border:1px solid #2b3039;background:#14171b;display:flex;align-items:center;justify-content:center;text-align:center;color:#69717f;padding:24px;line-height:1.7}
+#v-kb{flex-direction:column;padding:8px;gap:6px;overflow:auto}
+#txt{width:100%;background:var(--card);color:inherit;border:1px solid #2b3039;border-radius:8px;padding:10px;font:inherit;-webkit-user-select:text;user-select:text;touch-action:auto;resize:none}
+#keys{display:flex;flex-direction:column;gap:6px}
+.row{display:flex;gap:4px}
+.row button{flex:1;min-width:0;padding:13px 0;border:0;border-radius:6px;background:var(--btn);color:inherit;font:inherit;font-size:14px}
+.row button.on{background:var(--acc);color:#07121f}
+#v-set{flex-direction:column;padding:16px;gap:16px;overflow:auto;touch-action:pan-y}
+#v-set label{display:flex;flex-direction:column;gap:6px}
+#v-set input{width:100%;touch-action:auto}
+#v-set .act{padding:12px;border:0;border-radius:8px;background:var(--btn);color:inherit;font:inherit}
+#gp{position:relative;flex:1;overflow:hidden}
+.c{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;background:var(--btn);border:2px solid #3a414d;color:#cdd3de;font-weight:600;border-radius:50%;width:calc(56px*var(--u));height:calc(56px*var(--u));font-size:calc(20px*var(--u))}
+.c.sh{border-radius:12px;width:calc(76px*var(--u));height:calc(44px*var(--u));font-size:calc(15px*var(--u))}
+.c.sm{border-radius:10px;width:calc(52px*var(--u));height:calc(30px*var(--u));font-size:calc(12px*var(--u))}
+.c.st{width:calc(130px*var(--u));height:calc(130px*var(--u))}
+.c.p{background:var(--acc);color:#07121f}
+.k{width:44%;height:44%;border-radius:50%;background:#626b79;pointer-events:none}
+#gpbar{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);display:flex;gap:6px;z-index:5}
+#gpbar button{padding:6px 12px;border:0;border-radius:8px;background:#272b33cc;color:#aab1bd;font:inherit;font-size:12px}
+body.gpmode nav,body.gpmode #stw{display:none}
+body.edit .c{outline:2px dashed var(--warn)}
+#toast{position:fixed;left:12px;right:12px;bottom:12px;display:none;padding:10px 12px;border-radius:8px;background:var(--bad);color:#190404;z-index:9}
+@media(orientation:portrait){body.gpmode #gp::after{content:"Putar HP ke landscape";position:absolute;top:8px;left:0;right:0;text-align:center;color:var(--warn);pointer-events:none}}
+</style></head><body>
+<div id="app">
+<div id="stw"><span id="st"></span><span id="stt">Reconnecting</span></div>
+<nav><button data-v="pad" class="on">Touchpad</button><button data-v="kb">Keyboard</button><button data-v="gp">Controller</button><button data-v="set">Pengaturan</button></nav>
+<section class="view on" id="v-pad"><div id="pad">1 jari: geser = kursor, tap = klik kiri, tahan lalu geser = drag<br>2 jari: tap = klik kanan, geser = scroll, pinch = zoom<br>3 jari: tap = klik tengah, geser = Alt+Tab<br>4 jari: tap = tampilkan desktop, geser = ganti desktop</div></section>
+<section class="view" id="v-kb"><textarea id="txt" rows="2" placeholder="Ketik di sini, langsung muncul di PC"></textarea><div id="keys"></div></section>
+<section class="view" id="v-gp"><div id="gp"><div id="gpbar"><button id="bEdit">Atur tata letak</button><button id="bExit">Keluar</button></div></div></section>
+<section class="view" id="v-set"></section>
+</div>
+<div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],cl=v=>Math.max(0,Math.min(100,v));
+const token=new URLSearchParams(location.search).get('token')||'';
+const DEF={sens:1.6,scroll:1,dead:.12,size:1,layout:{}};
+let S;try{S={...DEF,...JSON.parse(localStorage.getItem('prc')||'{}')}}catch(e){S={...DEF}}
+const save=()=>{try{localStorage.setItem('prc',JSON.stringify(S))}catch(e){}};
+const apply=()=>document.documentElement.style.setProperty('--u',S.size);
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',4000)}
+document.addEventListener('contextmenu',e=>e.preventDefault());
+
+/* ---- koneksi ---- */
+let ws,retry=0,last=0;
+const setSt=(c,t)=>{$('#st').style.background=c;$('#stt').textContent=t};
+const send=o=>{if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))};
+function connect(){
+  ws=new WebSocket(`ws://${location.host}/ws?token=${encodeURIComponent(token)}`);
+  ws.onopen=()=>{retry=0;last=Date.now();setSt('var(--ok)','Connected')};
+  ws.onmessage=e=>{last=Date.now();const m=JSON.parse(e.data);if(m.err)toast(m.err)};
+  ws.onclose=e=>{
+    if(e.code===4000)return setSt('var(--bad)','Disconnected: perangkat lain terhubung');
+    if(e.code===1008)return setSt('var(--bad)','Disconnected: token ditolak');
+    setSt('var(--warn)','Reconnecting');setTimeout(connect,Math.min(500*++retry,3000));
+  };
+}
+setInterval(()=>{ // heartbeat: deteksi Wi-Fi putus
+  if(!ws||ws.readyState!==1)return;
+  if(Date.now()-last>6000){ws.onclose=null;ws.close();setSt('var(--warn)','Reconnecting');connect();return}
+  send({t:'ping'});
+},2000);
+
+/* ---- tab ---- */
+let edit=false;
+function setEdit(v){edit=v;document.body.classList.toggle('edit',v);$('#bEdit').textContent=v?'Selesai':'Atur tata letak'}
+function show(v){
+  $$('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
+  $$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  document.body.classList.toggle('gpmode',v==='gp');
+  if(v==='gp'){
+    const d=document.documentElement;
+    (d.requestFullscreen?d.requestFullscreen():Promise.reject()).then(()=>screen.orientation.lock('landscape')).catch(()=>{});
+  }else{
+    setEdit(false);
+    if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+    try{screen.orientation.unlock()}catch(e){}
+  }
+}
+$$('nav button').forEach(b=>b.onclick=()=>show(b.dataset.v));
+$('#bExit').onclick=()=>show('pad');
+$('#bEdit').onclick=()=>setEdit(!edit);
+
+/* ---- touchpad ---- */
+const pad=$('#pad');let T=null,acc={x:0,y:0},raf=0,sc={x:0,y:0};
+function flush(){raf=0;if(acc.x||acc.y){send({t:'mv',dx:acc.x,dy:acc.y});acc.x=acc.y=0}}
+const cen=ts=>{let x=0,y=0;for(const t of ts){x+=t.clientX;y+=t.clientY}return{x:x/ts.length,y:y/ts.length}};
+const dist=ts=>Math.hypot(ts[0].clientX-ts[1].clientX,ts[0].clientY-ts[1].clientY);
+const keys=k=>send({t:'keys',k});
+pad.addEventListener('touchstart',e=>{
+  e.preventDefault();const n=e.touches.length;
+  if(!T)T={t0:Date.now(),max:0,tx:0,ty:0,moved:false,drag:false,z:0,zt:0};
+  T.max=Math.max(T.max,n);T.n=n;T.c=cen(e.touches);T.d=n===2?dist(e.touches):0;
+  clearTimeout(T.lp);
+  if(n===1)T.lp=setTimeout(()=>{if(!T.moved&&T.n===1){T.drag=true;send({t:'down',b:'l'});navigator.vibrate&&navigator.vibrate(20)}},400);
+},{passive:false});
+pad.addEventListener('touchmove',e=>{
+  e.preventDefault();if(!T)return;
+  const n=e.touches.length,c=cen(e.touches),dx=c.x-T.c.x,dy=c.y-T.c.y;
+  T.c=c;T.tx+=dx;T.ty+=dy;
+  if(Math.hypot(T.tx,T.ty)>8){T.moved=true;clearTimeout(T.lp)}
+  if(n===1&&T.max===1){acc.x+=dx*S.sens;acc.y+=dy*S.sens;if(!raf)raf=requestAnimationFrame(flush)}
+  else if(n===2&&T.max===2){
+    const d=dist(e.touches),pd=d-T.d;T.d=d;T.zt+=Math.abs(pd);if(T.zt>8)T.moved=true;
+    if(Math.abs(pd)>Math.abs(dx)+Math.abs(dy)){T.z+=pd;if(Math.abs(T.z)>10){send({t:'zoom',d:T.z>0?120:-120});T.z=0}}
+    else{
+      sc.x+=-dx*S.scroll*6;sc.y+=dy*S.scroll*6;
+      const ix=Math.trunc(sc.x),iy=Math.trunc(sc.y);sc.x-=ix;sc.y-=iy;
+      if(ix||iy)send({t:'scroll',dx:ix,dy:iy});
+    }
+  }
+},{passive:false});
+pad.addEventListener('touchend',e=>{
+  e.preventDefault();if(!T)return;
+  if(e.touches.length){T.c=cen(e.touches);T.n=e.touches.length;T.d=T.n===2?dist(e.touches):0;return}
+  clearTimeout(T.lp);flush();
+  if(T.drag)send({t:'up',b:'l'});
+  else if(!T.moved&&Date.now()-T.t0<300){
+    if(T.max<=3)send({t:'click',b:['','l','r','m'][T.max]});
+    else keys(['win','d']);
+  }else if(T.max>=3&&Math.hypot(T.tx,T.ty)>40){
+    const h=Math.abs(T.tx)>Math.abs(T.ty),r=T.tx>0,u=T.ty<0;
+    if(T.max===3)keys(h?(r?['alt','tab']:['alt','shift','tab']):(u?['win','tab']:['win','d']));
+    else keys(h?['ctrl','win',r?'left':'right']:(u?['win','tab']:['win','d']));
+  }
+  T=null;
+},{passive:false});
+pad.addEventListener('touchcancel',()=>{if(T){clearTimeout(T.lp);if(T.drag)send({t:'up',b:'l'});T=null}});
+
+/* ---- keyboard ---- */
+const mods=new Set(),ROWS={abc:['qwertyuiop','asdfghjkl','zxcvbnm'],sym:['1234567890','-/:;()$&@"',".,?!'=+*#"]};
+let layer='abc',prev='';
+const R=(...bs)=>{const d=document.createElement('div');d.className='row';d.append(...bs);return d};
+const B=(lb,fn,on,fx)=>{const b=document.createElement('button');b.textContent=lb;if(on)b.className='on';if(fx)b.style.flex=fx;b.onclick=fn;return b};
+function key(k){send({t:'keys',k:[...mods,k]});if(mods.size){mods.clear();drawKeys()}}
+function drawKeys(){
+  const box=$('#keys'),up=mods.has('shift');box.replaceChildren();
+  box.append(R(...['ctrl','alt','shift','win'].map(m=>B(m[0].toUpperCase()+m.slice(1),()=>{mods.has(m)?mods.delete(m):mods.add(m);drawKeys()},mods.has(m)))));
+  ROWS[layer].forEach((r,i)=>{
+    const bs=[...r].map(c=>B(up&&layer==='abc'?c.toUpperCase():c,()=>key(c)));
+    if(i===2)bs.push(B('⌫',()=>key('backspace'),0,1.5));box.append(R(...bs));
+  });
+  box.append(R(B('Esc',()=>key('esc')),B('Tab',()=>key('tab')),B('Spasi',()=>key('space'),0,3),B('Enter',()=>key('enter')),B(layer==='abc'?'123':'ABC',()=>{layer=layer==='abc'?'sym':'abc';drawKeys()})));
+  box.append(R(...[['←','left'],['↑','up'],['↓','down'],['→','right']].map(([l,k])=>B(l,()=>key(k)))));
+  box.append(R(...[['Ctrl+C',['ctrl','c']],['Ctrl+V',['ctrl','v']],['Ctrl+X',['ctrl','x']],['Ctrl+Z',['ctrl','z']],['Ctrl+A',['ctrl','a']],['Alt+Tab',['alt','tab']]].map(([l,k])=>B(l,()=>keys(k)))));
+  box.append(R(B('Bersihkan kolom teks',()=>{$('#txt').value='';prev=''})));
+}
+$('#txt').addEventListener('input',()=>{ // kirim selisih ketikan secara real-time
+  const v=$('#txt').value;let i=0;
+  while(i<prev.length&&i<v.length&&prev[i]===v[i])i++;
+  const del=prev.length-i,add=v.slice(i);
+  if(del)send({t:'bs',n:del});if(add)send({t:'text',s:add});prev=v;
+});
+
+/* ---- controller ---- */
+const LAYOUT=[ // id, tipe, label, x%, y%, kelas
+['ls','st','',28,72],['rs','st','',72,72],
+['up','dp','▲',16,22],['down','dp','▼',16,46],['left','dp','◀',9,34],['right','dp','▶',23,34],
+['triangle','b','△',86,22],['cross','b','✕',86,46],['square','b','□',79,34],['circle','b','○',93,34],
+['l2','tr','L2',7,9,'sh'],['l1','b','L1',20,9,'sh'],['r1','b','R1',80,9,'sh'],['r2','tr','R2',93,9,'sh'],
+['share','b','Share',36,14,'sm'],['options','b','Options',64,14,'sm'],['ps','b','PS',50,34,'sm'],
+['l3','b','L3',40,84,'sm'],['r3','b','R3',60,84,'sm']];
+const gp=$('#gp'),dset=new Set();
+const place=(el,x,y)=>{el.style.left=x+'%';el.style.top=y+'%'};
+function dpad(){const u=dset.has('up'),d=dset.has('down'),l=dset.has('left'),r=dset.has('right');send({t:'dpad',v:(u?'n':d?'s':'')+(r?'e':l?'w':'')})}
+const H={
+  b:id=>({d:()=>send({t:'b',n:id,d:1}),u:()=>send({t:'b',n:id,d:0})}),
+  dp:id=>({d:()=>{dset.add(id);dpad()},u:()=>{dset.delete(id);dpad()}}),
+  tr:id=>{let y0=0;const s=id[0],f=e=>send({t:'tr',s,v:+Math.max(.15,Math.min(1,1-Math.max(0,y0-e.clientY)/60)).toFixed(2)});
+    return{d:e=>{y0=e.clientY;f(e)},m:f,u:()=>send({t:'tr',s,v:0})}}, // geser ke atas = trigger dilepas pelan
+  st:(id,el)=>{
+    const s=id[0],k=el.firstChild;let cx,cy;
+    const f=e=>{
+      const R=el.offsetWidth/2;let dx=e.clientX-cx,dy=e.clientY-cy;const d=Math.hypot(dx,dy);
+      if(d>R){dx*=R/d;dy*=R/d}
+      k.style.transform=`translate(${dx}px,${dy}px)`;
+      let x=dx/R,y=dy/R;const m=Math.hypot(x,y);
+      if(m<S.dead)x=y=0;else{const q=(m-S.dead)/(1-S.dead)/m;x*=q;y*=q}
+      send({t:'st',s,x:+x.toFixed(3),y:+(-y).toFixed(3)});
+    };
+    return{d:e=>{const r=el.getBoundingClientRect();cx=r.left+r.width/2;cy=r.top+r.height/2;f(e)},m:f,u:()=>{k.style.transform='';send({t:'st',s,x:0,y:0})}};
+  }
+};
+LAYOUT.forEach(([id,ty,lb,x,y,cls])=>{
+  const el=document.createElement('div');el.className='c '+(ty==='st'?'st':cls||'');
+  if(ty==='st')el.innerHTML='<div class="k"></div>';else el.textContent=lb;
+  place(el,...(S.layout[id]||[x,y]));gp.append(el);
+  const h=H[ty](id,el);let pid=null,drag=false;
+  el.addEventListener('pointerdown',e=>{
+    el.setPointerCapture(e.pointerId);
+    if(edit){drag=true;return}
+    pid=e.pointerId;if(ty!=='st')el.classList.add('p');h.d(e);
+  });
+  el.addEventListener('pointermove',e=>{
+    if(edit){if(!drag)return;const r=gp.getBoundingClientRect(),nx=cl((e.clientX-r.left)/r.width*100),ny=cl((e.clientY-r.top)/r.height*100);place(el,nx,ny);S.layout[id]=[nx,ny];return}
+    if(pid===e.pointerId&&h.m)h.m(e);
+  });
+  const end=e=>{
+    if(edit){if(drag){drag=false;save()}return}
+    if(pid!==e.pointerId)return;pid=null;el.classList.remove('p');h.u();
+  };
+  el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+});
+
+/* ---- pengaturan ---- */
+[['sens',.5,4,.1,'Sensitivitas kursor'],['scroll',.3,3,.1,'Kecepatan scroll'],['dead',0,.4,.01,'Deadzone analog'],['size',.7,1.5,.05,'Ukuran tombol controller']].forEach(([k,mn,mx,st,lb])=>{
+  const l=document.createElement('label');
+  l.innerHTML=`<span>${lb}: <b></b></span><input type="range" min="${mn}" max="${mx}" step="${st}">`;
+  const i=l.querySelector('input'),b=l.querySelector('b');i.value=S[k];b.textContent=S[k];
+  i.oninput=()=>{S[k]=+i.value;b.textContent=S[k];apply();save()};$('#v-set').append(l);
+});
+const act=(t,fn)=>{const b=document.createElement('button');b.className='act';b.textContent=t;b.onclick=fn;$('#v-set').append(b)};
+act('Atur posisi tombol controller',()=>{show('gp');setEdit(true)});
+act('Kembalikan tata letak controller',()=>{S.layout={};save();location.reload()});
+
+apply();drawKeys();connect();
+</script></body></html>
