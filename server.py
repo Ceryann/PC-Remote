@@ -187,6 +187,23 @@ async def ws_endpoint(ws: WebSocket, token: str = ""):
             reset_pad()
 
 
+def boost():
+    """Kurangi lonjakan delay: prioritas lebih tinggi, matikan throttling daya, timer 1 ms."""
+    try:
+        k = ctypes.windll.kernel32
+        h = k.GetCurrentProcess()
+        k.SetPriorityClass(h, 0x00008000)  # ABOVE_NORMAL_PRIORITY_CLASS
+
+        class Throttle(ctypes.Structure):
+            _fields_ = [("Version", ctypes.c_ulong), ("ControlMask", ctypes.c_ulong), ("StateMask", ctypes.c_ulong)]
+
+        st = Throttle(1, 1, 0)  # EXECUTION_SPEED dikontrol, state 0 = throttling mati
+        k.SetProcessInformation(h, 4, ctypes.byref(st), ctypes.sizeof(st))  # ProcessPowerThrottling
+        ctypes.windll.winmm.timeBeginPeriod(1)
+    except Exception:
+        pass  # tidak fatal; server tetap jalan
+
+
 def lan_ips():
     """Semua alamat IPv4 laptop di jaringan lokal (router Wi-Fi, hotspot, dll)."""
     ips = []
@@ -209,6 +226,7 @@ def lan_ips():
 
 
 if __name__ == "__main__":
+    boost()
     try:
         sys.stdout.reconfigure(encoding="utf-8")
     except Exception:
