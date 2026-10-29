@@ -12,7 +12,7 @@ except Exception:  # vgamepad / ViGEmBus belum terpasang
     vg = None
 
 PORT = int(os.environ.get("PORT", 8765))
-INVERT_STICK_Y = False  # ganti True bila sumbu Y analog terbalik di gamepad tester
+INVERT_STICK_Y = True  # sumbu Y analog dibalik (sudah dites: tanpa ini maju terbaca mundur)
 TOKEN = secrets.token_urlsafe(6)
 BASE = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 pyautogui.PAUSE = 0
