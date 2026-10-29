@@ -227,5 +227,6 @@ if __name__ == "__main__":
     print("Jika HP tidak bisa terhubung, izinkan port di Firewall (CMD sebagai Administrator):")
     print(f'netsh advfirewall firewall add rule name="PC Remote" dir=in action=allow protocol=TCP localport={PORT} profile=private\n')
     if vg is None:
-        print("Peringatan: vgamepad belum terpasang, modul Controller tidak aktif.\n")
+        print("Peringatan: driver ViGEmBus belum terpasang (atau vgamepad gagal dimuat), modul Controller tidak aktif.")
+        print("Touchpad dan keyboard tetap berfungsi. Pasang ViGEmBus lalu jalankan ulang untuk Controller.\n")
     uvicorn.run(app, host="0.0.0.0", port=PORT, log_level="warning")
