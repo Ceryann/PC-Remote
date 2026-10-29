@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 15   # supaya tidak menggantung berjam-jam
     steps:
       - uses: actions/checkout@v4
 
@@ -15,10 +16,23 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Pasang dependensi
+      - name: Pasang dependensi (tanpa vgamepad)
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt pyinstaller
+          pip install fastapi uvicorn websockets pyautogui qrcode pyinstaller
+
+      - name: Pasang vgamepad tanpa menjalankan setup-nya
+        shell: pwsh
+        run: |
+          $info = Invoke-RestMethod https://pypi.org/pypi/vgamepad/0.2.0/json
+          $url = ($info.urls | Where-Object { $_.packagetype -eq 'sdist' }).url
+          Invoke-WebRequest $url -OutFile vg.tar.gz
+          mkdir vg
+          tar -xzf vg.tar.gz -C vg
+          $pkg = Get-ChildItem vg -Recurse -Directory -Filter vgamepad | Select-Object -First 1
+          $site = python -c "import site; print(site.getsitepackages()[0])"
+          Copy-Item $pkg.FullName "$site\vgamepad" -Recurse
+          python -c "import vgamepad; print('vgamepad OK')"
 
       - name: Bungkus jadi satu .exe
         run: pyinstaller --onefile --name PCRemote --add-data "index.html;." --collect-all vgamepad --collect-submodules uvicorn server.py
