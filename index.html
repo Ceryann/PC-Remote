@@ -60,13 +60,14 @@ function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';cl
 document.addEventListener('contextmenu',e=>e.preventDefault());
 
 /* ---- koneksi ---- */
-let ws,retry=0,last=0;
+let ws,retry=0,last=0,pingT=0;
 const setSt=(c,t)=>{$('#st').style.background=c;$('#stt').textContent=t};
 const send=o=>{if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))};
 function connect(){
   ws=new WebSocket(`ws://${location.host}/ws?token=${encodeURIComponent(token)}`);
   ws.onopen=()=>{retry=0;last=Date.now();setSt('var(--ok)','Connected')};
-  ws.onmessage=e=>{last=Date.now();const m=JSON.parse(e.data);if(m.err)toast(m.err)};
+  ws.onmessage=e=>{last=Date.now();const m=JSON.parse(e.data);if(m.err)toast(m.err);
+    if(m.p){const r=Math.round(performance.now()-pingT);setSt(r>100?'var(--warn)':'var(--ok)',`Connected · ${r} ms`)}};
   ws.onclose=e=>{
     if(e.code===4000)return setSt('var(--bad)','Disconnected: perangkat lain terhubung');
     if(e.code===1008)return setSt('var(--bad)','Disconnected: token ditolak');
@@ -76,8 +77,8 @@ function connect(){
 setInterval(()=>{ // heartbeat: deteksi Wi-Fi putus
   if(!ws||ws.readyState!==1)return;
   if(Date.now()-last>6000){ws.onclose=null;ws.close();setSt('var(--warn)','Reconnecting');connect();return}
-  send({t:'ping'});
-},2000);
+  pingT=performance.now();send({t:'ping'});
+},1000);
 
 /* ---- tab ---- */
 let edit=false;
