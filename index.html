@@ -27,13 +27,15 @@ nav button.on{background:var(--acc);color:#07121f;font-weight:600}
 #v-set input{width:100%;touch-action:auto}
 #v-set .act{padding:12px;border:0;border-radius:8px;background:var(--btn);color:inherit;font:inherit}
 #gp{position:relative;flex:1;overflow:hidden}
-.c{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;background:var(--btn);border:2px solid #3a414d;color:#cdd3de;font-weight:600;border-radius:50%;width:calc(56px*var(--u));height:calc(56px*var(--u));font-size:calc(20px*var(--u))}
-.c.sh{border-radius:12px;width:calc(76px*var(--u));height:calc(44px*var(--u));font-size:calc(15px*var(--u))}
-.c.sm{border-radius:10px;width:calc(52px*var(--u));height:calc(30px*var(--u));font-size:calc(12px*var(--u))}
-.c.st{width:calc(130px*var(--u));height:calc(130px*var(--u))}
+.c{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;background:var(--btn);border:2px solid #3a414d;color:#cdd3de;font-weight:600;border-radius:50%;width:calc(56px*var(--u)*var(--s,1));height:calc(56px*var(--u)*var(--s,1));font-size:calc(20px*var(--u)*var(--s,1))}
+.c.sh{border-radius:12px;width:calc(76px*var(--u)*var(--s,1));height:calc(44px*var(--u)*var(--s,1));font-size:calc(15px*var(--u)*var(--s,1))}
+.c.sm{border-radius:10px;width:calc(52px*var(--u)*var(--s,1));height:calc(30px*var(--u)*var(--s,1));font-size:calc(12px*var(--u)*var(--s,1))}
+.c.st{width:calc(130px*var(--u)*var(--s,1));height:calc(130px*var(--u)*var(--s,1))}
 .c.p{background:var(--acc);color:#07121f}
 .k{width:44%;height:44%;border-radius:50%;background:#626b79;pointer-events:none}
-#gpbar{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);display:flex;gap:6px;z-index:5}
+#gpbar{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;max-width:96%;gap:6px;z-index:5}
+.ed{display:none}body.edit .ed{display:inline-block}
+.c.sel{outline:2px solid var(--acc)!important}
 #gpbar button{padding:6px 12px;border:0;border-radius:8px;background:#272b33cc;color:#aab1bd;font:inherit;font-size:12px}
 body.gpmode nav,body.gpmode #stw{display:none}
 body.edit .c{outline:2px dashed var(--warn)}
@@ -45,14 +47,14 @@ body.edit .c{outline:2px dashed var(--warn)}
 <nav><button data-v="pad" class="on">Touchpad</button><button data-v="kb">Keyboard</button><button data-v="gp">Controller</button><button data-v="set">Pengaturan</button></nav>
 <section class="view on" id="v-pad"><div id="pad">1 jari: geser = kursor, tap = klik kiri, tahan lalu geser = drag<br>2 jari: tap = klik kanan, geser = scroll, pinch = zoom<br>3 jari: tap = klik tengah, geser = Alt+Tab<br>4 jari: tap = tampilkan desktop, geser = ganti desktop</div></section>
 <section class="view" id="v-kb"><div id="keys"></div><textarea id="txt" rows="3" placeholder="Ketuk di sini lalu ketik dengan keyboard HP, langsung muncul di PC" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea></section>
-<section class="view" id="v-gp"><div id="gp"><div id="gpbar"><button id="bEdit">Atur tata letak</button><button id="bExit">Keluar</button></div></div></section>
+<section class="view" id="v-gp"><div id="gp"><div id="gpbar"><button id="bEdit">Atur tata letak</button><button class="ed" id="bMinus">Tombol −</button><button class="ed" id="bPlus">Tombol +</button><button class="ed" id="bAllMinus">Semua −</button><button class="ed" id="bAllPlus">Semua +</button><button class="ed" id="bReset">Reset</button><button id="bExit">Keluar</button></div></div></section>
 <section class="view" id="v-set"></section>
 </div>
 <div id="toast"></div>
 <script>
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],cl=v=>Math.max(0,Math.min(100,v));
 const token=new URLSearchParams(location.search).get('token')||'';
-const DEF={sens:1.6,scroll:1,dead:.12,size:1,layout:{}};
+const DEF={sens:1.6,scroll:1,dead:.12,size:1,layout:{},sizes:{}};
 let S;try{S={...DEF,...JSON.parse(localStorage.getItem('prc')||'{}')}}catch(e){S={...DEF}}
 const save=()=>{try{localStorage.setItem('prc',JSON.stringify(S))}catch(e){}};
 const apply=()=>document.documentElement.style.setProperty('--u',S.size);
@@ -82,7 +84,7 @@ setInterval(()=>{ // heartbeat: deteksi Wi-Fi putus
 
 /* ---- tab ---- */
 let edit=false;
-function setEdit(v){edit=v;document.body.classList.toggle('edit',v);$('#bEdit').textContent=v?'Selesai':'Atur tata letak'}
+function setEdit(v){edit=v;document.body.classList.toggle('edit',v);if(!v&&sel)select(null);$('#bEdit').textContent=v?'Selesai':'Atur tata letak'}
 function show(v){
   $$('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
   $$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
@@ -181,7 +183,7 @@ const LAYOUT=[ // id, tipe, label, x%, y%, kelas
 ['l2','tr','L2',7,9,'sh'],['l1','b','L1',20,9,'sh'],['r1','b','R1',80,9,'sh'],['r2','tr','R2',93,9,'sh'],
 ['share','b','Share',36,14,'sm'],['options','b','Options',64,14,'sm'],['ps','b','PS',50,34,'sm'],
 ['l3','b','L3',40,84,'sm'],['r3','b','R3',60,84,'sm']];
-const gp=$('#gp'),dset=new Set();
+const gp=$('#gp'),dset=new Set(),els={};let sel=null,rt=0;
 const place=(el,x,y)=>{el.style.left=x+'%';el.style.top=y+'%'};
 function dpad(){const u=dset.has('up'),d=dset.has('down'),l=dset.has('left'),r=dset.has('right');send({t:'dpad',v:(u?'n':d?'s':'')+(r?'e':l?'w':'')})}
 const H={
@@ -205,11 +207,11 @@ const H={
 LAYOUT.forEach(([id,ty,lb,x,y,cls])=>{
   const el=document.createElement('div');el.className='c '+(ty==='st'?'st':cls||'');
   if(ty==='st')el.innerHTML='<div class="k"></div>';else el.textContent=lb;
-  place(el,...(S.layout[id]||[x,y]));gp.append(el);
+  place(el,...(S.layout[id]||[x,y]));gp.append(el);els[id]=el;if(S.sizes&&S.sizes[id])el.style.setProperty('--s',S.sizes[id]);
   const h=H[ty](id,el);let pid=null,drag=false;
   el.addEventListener('pointerdown',e=>{
     el.setPointerCapture(e.pointerId);
-    if(edit){drag=true;return}
+    if(edit){drag=true;select(id);return}
     pid=e.pointerId;if(ty!=='st')el.classList.add('p');h.d(e);
   });
   el.addEventListener('pointermove',e=>{
@@ -223,16 +225,38 @@ LAYOUT.forEach(([id,ty,lb,x,y,cls])=>{
   el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
 });
 
+/* ---- atur ukuran & reset UI controller ---- */
+function select(id){sel=id;for(const k in els)els[k].classList.toggle('sel',k===id)}
+function setSize(v){ // ukuran semua tombol
+  S.size=Math.max(.6,Math.min(2,+(+v).toFixed(2)));apply();save();
+  const i=$('#v-set input[data-k=size]');if(i){i.value=S.size;i.parentElement.querySelector('b').textContent=S.size}
+}
+function sizeOne(d){ // ukuran tombol terpilih
+  if(!sel)return toast('Sentuh dulu tombol yang mau diubah ukurannya');
+  const v=Math.max(.5,Math.min(2.5,+((S.sizes[sel]||1)+d).toFixed(2)));
+  S.sizes[sel]=v;els[sel].style.setProperty('--s',v);save();
+}
+function resetUI(){
+  LAYOUT.forEach(([id,,,x,y])=>{place(els[id],x,y);els[id].style.removeProperty('--s')});
+  S.layout={};S.sizes={};select(null);setSize(1);save();
+}
+$('#bMinus').onclick=()=>sizeOne(-.1);$('#bPlus').onclick=()=>sizeOne(.1);
+$('#bAllMinus').onclick=()=>setSize(S.size-.1);$('#bAllPlus').onclick=()=>setSize(S.size+.1);
+$('#bReset').onclick=function(){ // tap dua kali agar tidak terpencet tanpa sengaja
+  if(rt){clearTimeout(rt);rt=0;this.textContent='Reset';resetUI()}
+  else{this.textContent='Yakin? Tap lagi';rt=setTimeout(()=>{rt=0;this.textContent='Reset'},3000)}
+};
+
 /* ---- pengaturan ---- */
-[['sens',.5,4,.1,'Sensitivitas kursor'],['scroll',.3,3,.1,'Kecepatan scroll'],['dead',0,.4,.01,'Deadzone analog'],['size',.7,1.5,.05,'Ukuran tombol controller']].forEach(([k,mn,mx,st,lb])=>{
+[['sens',.5,4,.1,'Sensitivitas kursor'],['scroll',.3,3,.1,'Kecepatan scroll'],['dead',0,.4,.01,'Deadzone analog'],['size',.6,2,.05,'Ukuran semua tombol controller']].forEach(([k,mn,mx,st,lb])=>{
   const l=document.createElement('label');
   l.innerHTML=`<span>${lb}: <b></b></span><input type="range" min="${mn}" max="${mx}" step="${st}">`;
-  const i=l.querySelector('input'),b=l.querySelector('b');i.value=S[k];b.textContent=S[k];
+  const i=l.querySelector('input'),b=l.querySelector('b');i.dataset.k=k;i.value=S[k];b.textContent=S[k];
   i.oninput=()=>{S[k]=+i.value;b.textContent=S[k];apply();save()};$('#v-set').append(l);
 });
 const act=(t,fn)=>{const b=document.createElement('button');b.className='act';b.textContent=t;b.onclick=fn;$('#v-set').append(b)};
 act('Atur posisi tombol controller',()=>{show('gp');setEdit(true)});
-act('Kembalikan tata letak controller',()=>{S.layout={};save();location.reload()});
+act('Reset UI controller ke default',e=>{const b=e.target;resetUI();b.textContent='Sudah direset ✓';setTimeout(()=>b.textContent='Reset UI controller ke default',1500)});
 
 apply();drawKeys();connect();
 </script></body></html>
