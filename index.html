@@ -37,6 +37,13 @@ nav button.on{background:var(--acc);color:#07121f;font-weight:600}
 #gpbar{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;max-width:96%;gap:6px;z-index:5}
 .ed{display:none}body.edit .ed{display:inline-block}
 .c.sel{outline:2px solid var(--acc)!important}
+.zone{position:absolute;top:0;bottom:0;width:50%}.zone.l{left:0}.zone.r{right:0}
+.zone::after{position:absolute;top:60%;left:0;right:0;text-align:center;color:#2f3540;font-size:13px;pointer-events:none}
+.zone.l::after{content:"Sentuh area ini: analog kiri"}.zone.r::after{content:"Sentuh area ini: analog kanan"}
+.dynb{position:absolute;display:none;transform:translate(-50%,-50%);width:calc(130px*var(--u));height:calc(130px*var(--u));border-radius:50%;background:#ffffff14;border:2px solid #5a6270;align-items:center;justify-content:center;pointer-events:none;z-index:2}
+body:not(.nodyn) .c.st{display:none}
+body.edit .zone,body.nodyn .zone{pointer-events:none}
+body.nodyn .zone::after,body.nodyn .dynb{display:none!important}
 #gpbar button{padding:6px 12px;border:0;border-radius:8px;background:#272b33cc;color:#aab1bd;font:inherit;font-size:12px}
 body.gpmode nav,body.gpmode #stw{display:none}
 body.edit .c{outline:2px dashed var(--warn)}
@@ -48,14 +55,14 @@ body.edit .c{outline:2px dashed var(--warn)}
 <nav><button data-v="pad" class="on">Touchpad</button><button data-v="kb">Keyboard</button><button data-v="gp">Controller</button><button data-v="set">Pengaturan</button></nav>
 <section class="view on" id="v-pad"><div id="pad">1 jari: geser = kursor, tap = klik kiri, tahan lalu geser = drag<br>2 jari: tap = klik kanan, geser = scroll, pinch = zoom<br>3 jari: tap = klik tengah, geser = Alt+Tab<br>4 jari: tap = tampilkan desktop, geser = ganti desktop</div></section>
 <section class="view" id="v-kb"><div id="keys"></div><div class="hint">Ketuk kotak di bawah lalu ketik dengan keyboard HP, langsung muncul di PC. Enter mengosongkan kotak.</div><textarea id="txt" rows="3" enterkeyhint="send" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea></section>
-<section class="view" id="v-gp"><div id="gp"><div id="gpbar"><button id="bEdit">Atur tata letak</button><button class="ed" id="bMinus">Tombol −</button><button class="ed" id="bPlus">Tombol +</button><button class="ed" id="bAllMinus">Semua −</button><button class="ed" id="bAllPlus">Semua +</button><button class="ed" id="bReset">Reset</button><button id="bExit">Keluar</button></div></div></section>
+<section class="view" id="v-gp"><div id="gp"><div id="gpbar"><button id="bEdit">Atur tata letak</button><button class="ed" id="bMinus">Tombol −</button><button class="ed" id="bPlus">Tombol +</button><button class="ed" id="bAllMinus">Semua −</button><button class="ed" id="bAllPlus">Semua +</button><button class="ed" id="bDyn"></button><button class="ed" id="bReset">Reset</button><button id="bExit">Keluar</button></div></div></section>
 <section class="view" id="v-set"></section>
 </div>
 <div id="toast"></div>
 <script>
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],cl=v=>Math.max(0,Math.min(100,v));
 const token=new URLSearchParams(location.search).get('token')||'';
-const DEF={sens:1.6,scroll:1,dead:.12,size:1,layout:{},sizes:{}};
+const DEF={sens:1.6,scroll:1,dead:.12,size:1,layout:{},sizes:{},dyn:true};
 let S;try{S={...DEF,...JSON.parse(localStorage.getItem('prc')||'{}')}}catch(e){S={...DEF}}
 const save=()=>{try{localStorage.setItem('prc',JSON.stringify(S))}catch(e){}};
 const apply=()=>document.documentElement.style.setProperty('--u',S.size);
@@ -200,6 +207,29 @@ const LAYOUT=[ // id, tipe, label, x%, y%, kelas
 ['share','b','Share',36,14,'sm'],['options','b','Options',64,14,'sm'],['ps','b','PS',50,34,'sm'],
 ['l3','b','L3',40,84,'sm'],['r3','b','R3',60,84,'sm']];
 const gp=$('#gp'),dset=new Set(),els={};let sel=null,rt=0;
+/* analog dinamis: muncul di titik sentuh pada separuh kiri/kanan layar, seperti game mobile */
+['l','r'].forEach(s=>{
+  const zone=document.createElement('div');zone.className='zone '+s;gp.append(zone);
+  const base=document.createElement('div');base.className='dynb';base.innerHTML='<div class="k"></div>';gp.append(base);
+  const knob=base.firstChild;let pid=null,cx=0,cy=0;
+  const f=e=>{
+    const R=65*S.size;let dx=e.clientX-cx,dy=e.clientY-cy;const d=Math.hypot(dx,dy);
+    if(d>R){dx*=R/d;dy*=R/d}
+    knob.style.transform=`translate(${dx}px,${dy}px)`;
+    let x=dx/R,y=dy/R;const m=Math.hypot(x,y);
+    if(m<S.dead)x=y=0;else{const q=(m-S.dead)/(1-S.dead)/m;x*=q;y*=q}
+    send({t:'st',s,x:+x.toFixed(3),y:+(-y).toFixed(3)});
+  };
+  zone.addEventListener('pointerdown',e=>{
+    if(edit||!S.dyn||pid!==null)return;
+    pid=e.pointerId;zone.setPointerCapture(pid);
+    const r=gp.getBoundingClientRect();cx=e.clientX;cy=e.clientY;
+    base.style.left=(cx-r.left)+'px';base.style.top=(cy-r.top)+'px';base.style.display='flex';f(e);
+  });
+  zone.addEventListener('pointermove',e=>{if(e.pointerId===pid)f(e)});
+  const end=e=>{if(e.pointerId!==pid)return;pid=null;base.style.display='none';knob.style.transform='';send({t:'st',s,x:0,y:0})};
+  zone.addEventListener('pointerup',end);zone.addEventListener('pointercancel',end);
+});
 const place=(el,x,y)=>{el.style.left=x+'%';el.style.top=y+'%'};
 function dpad(){const u=dset.has('up'),d=dset.has('down'),l=dset.has('left'),r=dset.has('right');send({t:'dpad',v:(u?'n':d?'s':'')+(r?'e':l?'w':'')})}
 const H={
@@ -271,6 +301,10 @@ $('#bReset').onclick=function(){ // tap dua kali agar tidak terpencet tanpa seng
   i.oninput=()=>{S[k]=+i.value;b.textContent=S[k];apply();save()};$('#v-set').append(l);
 });
 const act=(t,fn)=>{const b=document.createElement('button');b.className='act';b.textContent=t;b.onclick=fn;$('#v-set').append(b)};
+const dynB=document.createElement('button');dynB.className='act';
+const drawDyn=()=>{const t='Analog: '+(S.dyn?'Dinamis':'Tetap');dynB.textContent=t+' (ketuk untuk ganti)';$('#bDyn').textContent=t;document.body.classList.toggle('nodyn',!S.dyn)};
+const togDyn=()=>{S.dyn=!S.dyn;save();drawDyn()};
+dynB.onclick=$('#bDyn').onclick=togDyn;drawDyn();$('#v-set').append(dynB);
 act('Atur posisi tombol controller',()=>{show('gp');setEdit(true)});
 act('Reset UI controller ke default',e=>{const b=e.target;resetUI();b.textContent='Sudah direset ✓';setTimeout(()=>b.textContent='Reset UI controller ke default',1500)});
 
