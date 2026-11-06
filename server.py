@@ -1,5 +1,5 @@
 """PC Remote Controller - server untuk Windows 10/11.  Jalankan: python server.py"""
-import asyncio, ctypes, hmac, json, os, secrets, socket, sys
+import asyncio, ctypes, hmac, json, os, secrets, socket, subprocess, sys, threading
 from pathlib import Path
 
 import pyautogui, qrcode, uvicorn
@@ -105,6 +105,45 @@ def reset_pad(slot):
         pads[slot].update()
 
 
+# ---------- kecerahan (WMI, hanya layar bawaan laptop) ----------
+_bright = {"want": None}
+_bright_ev = threading.Event()
+
+
+def ps(cmd, timeout=10):
+    return subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", cmd],
+                          capture_output=True, text=True, timeout=timeout, creationflags=0x08000000)
+
+
+def get_brightness():
+    """Kecerahan saat ini (0-100), atau None bila layar tidak mendukung."""
+    try:
+        r = ps("Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightness | Select-Object -First 1 -ExpandProperty CurrentBrightness")
+        out = r.stdout.strip()
+        return int(out.splitlines()[0]) if r.returncode == 0 and out else None
+    except Exception:
+        return None
+
+
+def _bright_loop():  # hanya nilai terbaru yang dikerjakan, supaya geseran slider tidak menumpuk perintah
+    while True:
+        _bright_ev.wait()
+        _bright_ev.clear()
+        try:
+            ps("Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods | "
+               f"Invoke-CimMethod -MethodName WmiSetBrightness -Arguments @{{Timeout=1;Brightness={int(_bright['want'])}}}")
+        except Exception:
+            pass
+
+
+threading.Thread(target=_bright_loop, daemon=True).start()
+
+
+def set_brightness(v):
+    _bright["want"] = max(5, min(100, int(float(v))))  # minimal 5 agar layar tidak terlalu gelap
+    _bright_ev.set()
+
+
 # ---------- dispatcher ----------
 def handle(m, slot):
     t = m.get("t")
@@ -131,6 +170,12 @@ def handle(m, slot):
         combo(m["k"])
     elif t == "text":
         type_text(m["s"])
+    elif t == "vol":  # n > 0 naik, n < 0 turun; tiap langkah sekitar 2%
+        n = int(m["n"])
+        if n:
+            pyautogui.press("volumeup" if n > 0 else "volumedown", presses=min(abs(n), 25))
+    elif t == "bset":
+        set_brightness(m["v"])
     elif t == "bs":
         pyautogui.press("backspace", presses=min(int(m["n"]), 200))
 
@@ -175,6 +220,9 @@ async def ws_endpoint(ws: WebSocket, token: str = ""):
                 continue
             if m.get("t") == "ping":
                 await ws.send_text('{"p":1}')
+                continue
+            if m.get("t") == "bget":
+                await ws.send_text(json.dumps({"bright": await asyncio.to_thread(get_brightness)}))
                 continue
             try:
                 handle(m, slot)
