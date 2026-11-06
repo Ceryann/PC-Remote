@@ -22,7 +22,9 @@ Semua versi ada di halaman [Releases](https://github.com/Ceryann/PC-Remote/relea
 
 ## Mulai cepat
 
-1. Unduh dan jalankan **PCRemote.exe**. Jendela hitam akan menampilkan **QR code**.
+> **Penting:** jalankan PCRemote.exe dengan **Run as administrator**. Tanpa hak administrator, Windows memblokir input ke game, Task Manager, dan jendela lain yang berjalan sebagai administrator, sehingga touchpad dan keyboard tidak berfungsi di sana. Tips: agar tidak perlu klik kanan setiap kali, klik kanan file, pilih **Properties**, buka tab **Compatibility**, centang **Run this program as an administrator**, lalu **OK**.
+
+1. Unduh **PCRemote.exe**, lalu jalankan dengan **klik kanan, Run as administrator** (jawab **Yes** di pop-up UAC). Jendela hitam akan menampilkan **QR code**.
 2. Kalau muncul jendela Windows Firewall, centang **Private networks** lalu **Allow access**.
 3. Pastikan HP dan laptop ada di **Wi-Fi atau router yang sama**.
 4. Scan QR dengan kamera HP, lalu buka link-nya di browser.
@@ -110,10 +112,10 @@ Keamanan: setiap sesi memakai token acak di URL, dan request tanpa token yang be
 | Masalah | Solusi |
 |---|---|
 | QR tidak terbuka atau HP tidak bisa terhubung | Pastikan satu jaringan. Izinkan di Firewall (centang Private). Wi-Fi tamu sering memisahkan perangkat, jadi pakai jaringan utama atau hotspot. Server juga mencetak alamat alternatif di jendela hitam. |
-| Input tidak jalan di game, Task Manager, atau jendela lain | Jalankan **PCRemote.exe sebagai Administrator** (klik kanan, Run as administrator). Pop-up UAC tidak bisa dikontrol program mana pun, jawab langsung di laptop. Game dengan anti-cheat sering memblokir input mouse dan keyboard, jadi pakai tab Controller. |
+| Input tidak jalan di game, Task Manager, atau jendela lain | Pastikan **PCRemote.exe dijalankan sebagai Administrator** (klik kanan, Run as administrator). Pop-up UAC tidak bisa dikontrol program mana pun, jawab langsung di laptop. Game dengan anti-cheat sering memblokir input mouse dan keyboard, jadi pakai tab Controller. |
 | Controller tidak terdeteksi | Pasang **ViGEmBus**, lalu jalankan ulang PCRemote.exe. Cek di Windows **Set up USB game controllers** apakah muncul Wireless Controller. |
 | Kadang lag atau delay | Perhatikan angka ms di atas. Pakai 5 GHz, matikan hemat baterai di HP, colok charger laptop, dan jauhkan dari unduhan besar di jaringan yang sama. |
-| Kecerahan tidak berubah | Fitur ini hanya untuk layar bawaan laptop. Coba jalankan sebagai Administrator. |
+| Kecerahan tidak berubah | Fitur ini hanya untuk layar bawaan laptop. Pastikan PCRemote.exe dijalankan sebagai Administrator. |
 | Teks tidak muncul | Hanya karakter ASCII yang didukung. |
 
 ## Untuk pengembang
