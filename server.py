@@ -62,24 +62,24 @@ PAD_BTN = {"cross": "CROSS", "circle": "CIRCLE", "square": "SQUARE", "triangle":
            "share": "SHARE", "options": "OPTIONS"}
 DPAD = {"": "NONE", "n": "NORTH", "ne": "NORTHEAST", "e": "EAST", "se": "SOUTHEAST",
         "s": "SOUTH", "sw": "SOUTHWEST", "w": "WEST", "nw": "NORTHWEST"}
-pad = None
+MAX_CLIENTS = 2
+pads = [None] * MAX_CLIENTS  # satu DualShock 4 virtual per client (Player 1 dan 2)
 
 
-def get_pad():
-    global pad
+def get_pad(slot):
     if vg is None:
         raise RuntimeError("vgamepad/ViGEmBus belum terpasang, controller tidak aktif")
-    if pad is None:
-        pad = vg.VDS4Gamepad()  # Windows mengenali sebagai Wireless Controller
-    return pad
+    if pads[slot] is None:
+        pads[slot] = vg.VDS4Gamepad()  # Windows mengenali sebagai Wireless Controller
+    return pads[slot]
 
 
 def clamp(v, lo=-1.0, hi=1.0):
     return max(lo, min(hi, float(v)))
 
 
-def pad_event(m):
-    g, t = get_pad(), m["t"]
+def pad_event(m, slot):
+    g, t = get_pad(slot), m["t"]
     if t == "b":
         down = bool(m["d"])
         if m["n"] == "ps":
@@ -99,17 +99,17 @@ def pad_event(m):
     g.update()
 
 
-def reset_pad():
-    if pad is not None:
-        pad.reset()
-        pad.update()
+def reset_pad(slot):
+    if pads[slot] is not None:
+        pads[slot].reset()
+        pads[slot].update()
 
 
 # ---------- dispatcher ----------
-def handle(m):
+def handle(m, slot):
     t = m.get("t")
     if t in ("b", "dpad", "st", "tr"):
-        pad_event(m)
+        pad_event(m, slot)
     elif t == "mv":
         move(float(m["dx"]), float(m["dy"]))
     elif t == "click":
@@ -137,7 +137,7 @@ def handle(m):
 
 # ---------- web ----------
 app = FastAPI()
-active = None
+clients = {}  # ws -> nomor slot (0 atau 1), berurut dari yang paling lama
 
 
 def valid(token):
@@ -153,20 +153,23 @@ def index(token: str = ""):
 
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket, token: str = ""):
-    global active
     await ws.accept()
     if not valid(token):
         await ws.close(1008)
         return
-    if active is not None:  # last-one-wins: putus client lama
+    while len(clients) >= MAX_CLIENTS:  # penuh: putus client yang paling lama
+        old = next(iter(clients))
+        reset_pad(clients.pop(old))
         try:
-            await active.close(4000)
+            await old.close(4000)
         except Exception:
             pass
-    active = ws
+    slot = next(i for i in range(MAX_CLIENTS) if i not in clients.values())
+    clients[ws] = slot
     warned = False
     try:
-        while active is ws:
+        await ws.send_text(json.dumps({"hello": 1, "slot": slot + 1}))
+        while ws in clients:
             m = json.loads(await ws.receive_text())
             if not isinstance(m, dict):
                 continue
@@ -174,7 +177,7 @@ async def ws_endpoint(ws: WebSocket, token: str = ""):
                 await ws.send_text('{"p":1}')
                 continue
             try:
-                handle(m)
+                handle(m, slot)
             except Exception as e:
                 if not warned:
                     warned = True
@@ -182,9 +185,8 @@ async def ws_endpoint(ws: WebSocket, token: str = ""):
     except (WebSocketDisconnect, RuntimeError, ValueError):
         pass
     finally:
-        if active is ws:
-            active = None
-            reset_pad()
+        if clients.pop(ws, None) is not None:
+            reset_pad(slot)
 
 
 def boost():
@@ -236,7 +238,7 @@ if __name__ == "__main__":
     q = qrcode.QRCode(border=1)
     q.add_data(url)
     q.print_ascii(invert=True)
-    print(f"\nScan QR di atas dengan HP (satu Wi-Fi/router yang sama), atau buka:\n{url}\n")
+    print(f"\nScan QR di atas dengan HP (satu Wi-Fi/router yang sama, maksimal 2 HP), atau buka:\n{url}\n")
     if len(ips) > 1:
         print("Jika QR tidak bisa dibuka, laptop punya jaringan lain. Coba alamat ini di HP:")
         for ip in ips[1:]:
