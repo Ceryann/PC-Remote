@@ -36,6 +36,8 @@ nav button.on{background:var(--acc);color:#07121f;font-weight:600}
 .k{width:44%;height:44%;border-radius:50%;background:#626b79;pointer-events:none}
 #gpbar{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;max-width:96%;gap:6px;z-index:5}
 .ed{display:none}body.edit .ed{display:inline-block}
+body.edit #gpPre{display:flex;flex-basis:100%;justify-content:center;gap:6px}
+#gpbar button.on{background:var(--acc);color:#07121f}
 .c.sel{outline:2px solid var(--acc)!important}
 .zone{position:absolute;top:0;bottom:0;width:50%}.zone.l{left:0}.zone.r{right:0}
 .zone::after{position:absolute;top:60%;left:0;right:0;text-align:center;color:#2f3540;font-size:13px;pointer-events:none}
@@ -55,31 +57,36 @@ body.edit .c{outline:2px dashed var(--warn)}
 <nav><button data-v="pad" class="on">Touchpad</button><button data-v="kb">Keyboard</button><button data-v="gp">Controller</button><button data-v="set">Pengaturan</button></nav>
 <section class="view on" id="v-pad"><div id="pad">1 jari: geser = kursor, tap = klik kiri, tahan lalu geser = drag<br>2 jari: tap = klik kanan, geser = scroll, pinch = zoom<br>3 jari: tap = klik tengah, geser = Alt+Tab<br>4 jari: tap = tampilkan desktop, geser = ganti desktop</div></section>
 <section class="view" id="v-kb"><div id="keys"></div><div class="hint">Ketuk kotak di bawah lalu ketik dengan keyboard HP, langsung muncul di PC. Enter mengosongkan kotak.</div><textarea id="txt" rows="3" enterkeyhint="send" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea></section>
-<section class="view" id="v-gp"><div id="gp"><div id="gpbar"><button id="bEdit">Atur tata letak</button><button class="ed" id="bMinus">Tombol −</button><button class="ed" id="bPlus">Tombol +</button><button class="ed" id="bAllMinus">Semua −</button><button class="ed" id="bAllPlus">Semua +</button><button class="ed" id="bDyn"></button><button class="ed" id="bReset">Reset</button><button id="bExit">Keluar</button></div></div></section>
+<section class="view" id="v-gp"><div id="gp"><div id="gpbar"><div class="ed" id="gpPre"></div><button id="bEdit">Atur tata letak</button><button class="ed" id="bMinus">Tombol −</button><button class="ed" id="bPlus">Tombol +</button><button class="ed" id="bAllMinus">Semua −</button><button class="ed" id="bAllPlus">Semua +</button><button class="ed" id="bDyn"></button><button class="ed" id="bDel">Hapus preset</button><button class="ed" id="bReset">Reset</button><button id="bExit">Keluar</button></div></div></section>
 <section class="view" id="v-set"></section>
 </div>
 <div id="toast"></div>
 <script>
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],cl=v=>Math.max(0,Math.min(100,v));
 const token=new URLSearchParams(location.search).get('token')||'';
-const DEF={sens:1.6,scroll:1,dead:.12,size:1,layout:{},sizes:{},dyn:true};
+const DEF={sens:1.6,scroll:1,dead:.12,size:1,layout:{},sizes:{},dyn:true,vib:12};
 let S;try{S={...DEF,...JSON.parse(localStorage.getItem('prc')||'{}')}}catch(e){S={...DEF}}
-const save=()=>{try{localStorage.setItem('prc',JSON.stringify(S))}catch(e){}};
+// Preset tata letak: S.layout/S.sizes/S.size selalu milik preset aktif; save() menyalinnya ke preset.
+if(!Array.isArray(S.presets)||!S.presets.length){S.presets=[{layout:S.layout||{},sizes:S.sizes||{},size:S.size||1},{layout:{},sizes:{},size:1}];S.cur=0}
+S.cur=Math.min(S.cur||0,S.presets.length-1);
+{const p=S.presets[S.cur];S.layout=p.layout;S.sizes=p.sizes;S.size=p.size}
+const save=()=>{try{const p=S.presets[S.cur];p.layout=S.layout;p.sizes=S.sizes;p.size=S.size;localStorage.setItem('prc',JSON.stringify(S))}catch(e){}};
 const apply=()=>document.documentElement.style.setProperty('--u',S.size);
 function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',4000)}
 document.addEventListener('contextmenu',e=>e.preventDefault());
 
 /* ---- koneksi ---- */
-let ws,retry=0,last=0,pingT=0;
+let ws,retry=0,last=0,pingT=0,slot=1;
 const setSt=(c,t)=>{$('#st').style.background=c;$('#stt').textContent=t};
 const send=o=>{if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))};
 function connect(){
   ws=new WebSocket(`ws://${location.host}/ws?token=${encodeURIComponent(token)}`);
   ws.onopen=()=>{retry=0;last=Date.now();setSt('var(--ok)','Connected')};
   ws.onmessage=e=>{last=Date.now();const m=JSON.parse(e.data);if(m.err)toast(m.err);
-    if(m.p){const r=Math.round(performance.now()-pingT);setSt(r>100?'var(--warn)':'var(--ok)',`Connected · ${r} ms`)}};
+    if(m.hello)slot=m.slot;
+    if(m.p){const r=Math.round(performance.now()-pingT);setSt(r>100?'var(--warn)':'var(--ok)',`Connected · P${slot} · ${r} ms`)}};
   ws.onclose=e=>{
-    if(e.code===4000)return setSt('var(--bad)','Disconnected: perangkat lain terhubung');
+    if(e.code===4000)return setSt('var(--bad)','Disconnected: digantikan perangkat ketiga');
     if(e.code===1008)return setSt('var(--bad)','Disconnected: token ditolak');
     setSt('var(--warn)','Reconnecting');setTimeout(connect,Math.min(500*++retry,3000));
   };
@@ -258,7 +265,7 @@ LAYOUT.forEach(([id,ty,lb,x,y,cls])=>{
   el.addEventListener('pointerdown',e=>{
     el.setPointerCapture(e.pointerId);
     if(edit){drag=true;select(id);return}
-    pid=e.pointerId;if(ty!=='st')el.classList.add('p');h.d(e);
+    pid=e.pointerId;if(ty!=='st'){el.classList.add('p');if(S.vib&&navigator.vibrate)navigator.vibrate(S.vib)}h.d(e);
   });
   el.addEventListener('pointermove',e=>{
     if(edit){if(!drag)return;const r=gp.getBoundingClientRect(),nx=cl((e.clientX-r.left)/r.width*100),ny=cl((e.clientY-r.top)/r.height*100);place(el,nx,ny);S.layout[id]=[nx,ny];return}
@@ -293,12 +300,39 @@ $('#bReset').onclick=function(){ // tap dua kali agar tidak terpencet tanpa seng
   else{this.textContent='Yakin? Tap lagi';rt=setTimeout(()=>{rt=0;this.textContent='Reset'},3000)}
 };
 
+/* ---- preset tata letak ---- */
+function loadPreset(i){
+  S.cur=i;const p=S.presets[i];S.layout=p.layout;S.sizes=p.sizes;S.size=p.size;
+  LAYOUT.forEach(([id,,,x,y])=>{
+    place(els[id],...(S.layout[id]||[x,y]));
+    if(S.sizes[id])els[id].style.setProperty('--s',S.sizes[id]);else els[id].style.removeProperty('--s');
+  });
+  select(null);setSize(S.size);drawPresets();
+}
+const usePreset=i=>{save();loadPreset(i)};
+function addPreset(){ // preset baru = salinan tata letak yang sedang aktif
+  if(S.presets.length>=8)return toast('Maksimal 8 preset');
+  save();S.presets.push({layout:JSON.parse(JSON.stringify(S.layout)),sizes:JSON.parse(JSON.stringify(S.sizes)),size:S.size});
+  loadPreset(S.presets.length-1);
+}
+function drawPresets(){
+  const box=$('#gpPre');box.replaceChildren();
+  S.presets.forEach((p,i)=>{const b=document.createElement('button');b.textContent='Preset '+(i+1);if(i===S.cur)b.className='on';b.onclick=()=>usePreset(i);box.append(b)});
+  const a=document.createElement('button');a.textContent='+ Preset';a.onclick=addPreset;box.append(a);
+}
+let dt=0;
+$('#bDel').onclick=function(){ // tap dua kali agar tidak terhapus tanpa sengaja
+  if(S.presets.length<2)return toast('Minimal harus ada 1 preset');
+  if(dt){clearTimeout(dt);dt=0;this.textContent='Hapus preset';S.presets.splice(S.cur,1);loadPreset(Math.max(0,S.cur-1))}
+  else{this.textContent='Yakin? Tap lagi';dt=setTimeout(()=>{dt=0;this.textContent='Hapus preset'},3000)}
+};
+
 /* ---- pengaturan ---- */
-[['sens',.5,4,.1,'Sensitivitas kursor'],['scroll',.3,3,.1,'Kecepatan scroll'],['dead',0,.4,.01,'Deadzone analog'],['size',.6,2,.05,'Ukuran semua tombol controller']].forEach(([k,mn,mx,st,lb])=>{
+[['sens',.5,4,.1,'Sensitivitas kursor'],['scroll',.3,3,.1,'Kecepatan scroll'],['dead',0,.4,.01,'Deadzone analog'],['size',.6,2,.05,'Ukuran semua tombol controller'],['vib',0,40,1,'Getaran tombol (ms, 0 = mati)']].forEach(([k,mn,mx,st,lb])=>{
   const l=document.createElement('label');
   l.innerHTML=`<span>${lb}: <b></b></span><input type="range" min="${mn}" max="${mx}" step="${st}">`;
   const i=l.querySelector('input'),b=l.querySelector('b');i.dataset.k=k;i.value=S[k];b.textContent=S[k];
-  i.oninput=()=>{S[k]=+i.value;b.textContent=S[k];apply();save()};$('#v-set').append(l);
+  i.oninput=()=>{S[k]=+i.value;b.textContent=S[k];apply();save();if(k==='vib'&&S.vib&&navigator.vibrate)navigator.vibrate(S.vib)};$('#v-set').append(l);
 });
 const act=(t,fn)=>{const b=document.createElement('button');b.className='act';b.textContent=t;b.onclick=fn;$('#v-set').append(b)};
 const dynB=document.createElement('button');dynB.className='act';
@@ -308,5 +342,5 @@ dynB.onclick=$('#bDyn').onclick=togDyn;drawDyn();$('#v-set').append(dynB);
 act('Atur posisi tombol controller',()=>{show('gp');setEdit(true)});
 act('Reset UI controller ke default',e=>{const b=e.target;resetUI();b.textContent='Sudah direset ✓';setTimeout(()=>b.textContent='Reset UI controller ke default',1500)});
 
-apply();drawKeys();connect();
+apply();drawKeys();drawPresets();connect();
 </script></body></html>
