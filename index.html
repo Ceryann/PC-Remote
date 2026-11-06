@@ -10,7 +10,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:#e6e8eb;font:15px syst
 #stw{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:13px;background:var(--card)}
 #st{width:10px;height:10px;border-radius:50%;background:var(--bad)}
 nav{display:flex;gap:6px;padding:6px;background:var(--card)}
-nav button{flex:1;padding:11px 2px;border:0;border-radius:8px;background:var(--btn);color:inherit;font:inherit}
+nav button{flex:1;min-width:0;padding:11px 2px;border:0;border-radius:8px;background:var(--btn);color:inherit;font:inherit;font-size:13px}
 nav button.on{background:var(--acc);color:#07121f;font-weight:600}
 .view{display:none;flex:1;min-height:0}.view.on{display:flex}
 #pad{flex:1;margin:8px;border-radius:14px;border:1px solid #2b3039;background:#14171b;display:flex;align-items:center;justify-content:center;text-align:center;color:#69717f;padding:24px;line-height:1.7}
@@ -21,6 +21,11 @@ nav button.on{background:var(--acc);color:#07121f;font-weight:600}
 .row button{flex:1;min-width:0;padding:13px 0;border:0;border-radius:6px;background:var(--btn);color:inherit;font:inherit;font-size:14px}
 .row button.on{background:var(--acc);color:#07121f}
 .hint{color:#69717f;font-size:13px}
+#v-sys{flex-direction:column;padding:16px;gap:14px;overflow:auto;touch-action:pan-y}
+#v-sys h3{margin:6px 0 0;font-size:15px;font-weight:600}
+#v-sys input{width:100%;touch-action:auto}
+#v-sys .row button{padding:18px 0}
+#v-sys small{color:#69717f}
 .row.scroll{overflow-x:auto;touch-action:pan-x}
 .row.scroll button{flex:0 0 62px;touch-action:pan-x}
 #v-set{flex-direction:column;padding:16px;gap:16px;overflow:auto;touch-action:pan-y}
@@ -54,11 +59,11 @@ body.edit .c{outline:2px dashed var(--warn)}
 </style></head><body>
 <div id="app">
 <div id="stw"><span id="st"></span><span id="stt">Reconnecting</span></div>
-<nav><button data-v="pad" class="on">Touchpad</button><button data-v="kb">Keyboard</button><button data-v="gp">Controller</button><button data-v="set">Pengaturan</button></nav>
+<nav><button data-v="pad" class="on">Touchpad</button><button data-v="kb">Keyboard</button><button data-v="gp">Controller</button><button data-v="sys">Sistem</button><button data-v="set">Pengaturan</button></nav>
 <section class="view on" id="v-pad"><div id="pad">1 jari: geser = kursor, tap = klik kiri, tahan lalu geser = drag<br>2 jari: tap = klik kanan, geser = scroll, pinch = zoom<br>3 jari: tap = klik tengah, geser = Alt+Tab<br>4 jari: tap = tampilkan desktop, geser = ganti desktop</div></section>
 <section class="view" id="v-kb"><div id="keys"></div><div class="hint">Ketuk kotak di bawah lalu ketik dengan keyboard HP, langsung muncul di PC. Enter mengosongkan kotak.</div><textarea id="txt" rows="3" enterkeyhint="send" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea></section>
 <section class="view" id="v-gp"><div id="gp"><div id="gpbar"><div class="ed" id="gpPre"></div><button id="bEdit">Atur tata letak</button><button class="ed" id="bMinus">Tombol −</button><button class="ed" id="bPlus">Tombol +</button><button class="ed" id="bAllMinus">Semua −</button><button class="ed" id="bAllPlus">Semua +</button><button class="ed" id="bDyn"></button><button class="ed" id="bDel">Hapus preset</button><button class="ed" id="bReset">Reset</button><button id="bExit">Keluar</button></div></div></section>
-<section class="view" id="v-set"></section>
+<section class="view" id="v-sys"></section><section class="view" id="v-set"></section>
 </div>
 <div id="toast"></div>
 <script>
@@ -84,6 +89,7 @@ function connect(){
   ws.onopen=()=>{retry=0;last=Date.now();setSt('var(--ok)','Connected')};
   ws.onmessage=e=>{last=Date.now();const m=JSON.parse(e.data);if(m.err)toast(m.err);
     if(m.hello)slot=m.slot;
+    if('bright' in m)onBright(m.bright);
     if(m.p){const r=Math.round(performance.now()-pingT);setSt(r>100?'var(--warn)':'var(--ok)',`Connected · P${slot} · ${r} ms`)}};
   ws.onclose=e=>{
     if(e.code===4000)return setSt('var(--bad)','Disconnected: digantikan perangkat ketiga');
@@ -101,6 +107,7 @@ setInterval(()=>{ // heartbeat: deteksi Wi-Fi putus
 let edit=false;
 function setEdit(v){edit=v;document.body.classList.toggle('edit',v);if(!v&&sel)select(null);$('#bEdit').textContent=v?'Selesai':'Atur tata letak'}
 function show(v){
+  if(v==='sys')send({t:'bget'});
   $$('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
   $$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   document.body.classList.toggle('gpmode',v==='gp');
@@ -326,6 +333,30 @@ $('#bDel').onclick=function(){ // tap dua kali agar tidak terhapus tanpa sengaja
   if(dt){clearTimeout(dt);dt=0;this.textContent='Hapus preset';S.presets.splice(S.cur,1);loadPreset(Math.max(0,S.cur-1))}
   else{this.textContent='Yakin? Tap lagi';dt=setTimeout(()=>{dt=0;this.textContent='Hapus preset'},3000)}
 };
+
+/* ---- sistem: volume & kecerahan ---- */
+const sysv=$('#v-sys');
+const one=(lb,fn)=>{const b=document.createElement('button');b.textContent=lb;b.onclick=fn;return b};
+const hold=(lb,fn,ms)=>{ // tombol yang berulang saat ditahan
+  const b=document.createElement('button');b.textContent=lb;let t=0,iv=0;
+  const stop=()=>{clearTimeout(t);clearInterval(iv);t=iv=0};
+  b.onpointerdown=e=>{e.preventDefault();stop();fn();t=setTimeout(()=>{iv=setInterval(()=>b.isConnected?fn():stop(),ms)},400)};
+  b.onpointerup=b.onpointercancel=b.onpointerleave=stop;return b;
+};
+const vol=n=>send({t:'vol',n});
+sysv.innerHTML='<h3>Volume</h3><div class="row" id="rv1"></div><div class="row" id="rv2"></div><small>Tiap langkah sekitar 2%. Tahan tombol Vol untuk mengulang.</small><h3>Kecerahan layar: <span id="brv">-</span></h3><input type="range" id="bri" min="5" max="100" step="1" value="50"><div class="row" id="rb"></div><small id="brs">Hanya untuk layar bawaan laptop.</small>';
+$('#rv1').append(one('Mute / Unmute',()=>send({t:'keys',k:['volumemute']})));
+$('#rv2').append(one('-10%',()=>vol(-5)),hold('Vol -',()=>vol(-1),90),hold('Vol +',()=>vol(1),90),one('+10%',()=>vol(5)));
+const bri=$('#bri');let bt=0;
+function setBri(v){bri.value=v;$('#brv').textContent=bri.value+'%';clearTimeout(bt);bt=setTimeout(()=>send({t:'bset',v:+bri.value}),80)}
+bri.oninput=()=>setBri(bri.value);
+$('#rb').append(one('-5',()=>setBri(Math.max(5,+bri.value-5))),one('+5',()=>setBri(Math.min(100,+bri.value+5))));
+function onBright(v){ // jawaban server: kecerahan saat ini, atau null bila tidak didukung
+  const ok=v!==null&&v!==undefined;
+  bri.disabled=!ok;$$('#rb button').forEach(b=>b.disabled=!ok);
+  if(ok){bri.value=Math.max(5,v);$('#brv').textContent=v+'%';$('#brs').textContent='Hanya untuk layar bawaan laptop.'}
+  else{$('#brv').textContent='-';$('#brs').textContent='Kecerahan tidak didukung di layar ini (misalnya monitor eksternal atau PC desktop).'}
+}
 
 /* ---- pengaturan ---- */
 [['sens',.5,4,.1,'Sensitivitas kursor'],['scroll',.3,3,.1,'Kecepatan scroll'],['dead',0,.4,.01,'Deadzone analog'],['size',.6,2,.05,'Ukuran semua tombol controller'],['vib',0,40,1,'Getaran tombol (ms, 0 = mati)']].forEach(([k,mn,mx,st,lb])=>{
