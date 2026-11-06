@@ -1,58 +1,140 @@
-# PC Remote Controller
+# PC Remote
 
-HP Android jadi touchpad, keyboard, dan gamepad PS4 untuk laptop Windows. Tanpa APK, tanpa internet.
+PC Remote mengubah HP Android menjadi **touchpad, keyboard, dan gamepad PS4 (DualShock 4)** untuk laptop Windows. Tidak ada aplikasi yang dipasang di HP: cukup scan QR dari program di laptop, lalu buka di browser. Semuanya berjalan lewat Wi-Fi atau jaringan lokal, tanpa internet.
 
-## Menjalankan
-1. `pip install -r requirements.txt` (vgamepad memasang driver ViGEmBus, setujui prompt-nya)
-2. `python server.py`
-3. Scan QR di terminal dengan HP yang satu Wi-Fi.
+- Tanpa APK di HP, pairing cukup scan QR
+- Touchpad dengan gestur 1 sampai 4 jari, keyboard HP dengan tombol laptop tambahan
+- Controller PS4 virtual dengan analog dinamis, getaran, dan tata letak yang bisa diatur (preset)
+- Kontrol volume dan kecerahan layar
+- Bisa dipakai 2 HP sekaligus
+- Antarmuka berbahasa Indonesia
 
-Jika HP tidak bisa terhubung, jalankan perintah `netsh` yang dicetak server (CMD sebagai Administrator).
+## Unduh
 
-## Cara menyambungkan HP dan laptop
-Keduanya harus ada di jaringan lokal yang sama. Pilih salah satu:
+| Komponen | Link | Keterangan |
+|---|---|---|
+| **PCRemote.exe** (versi terbaru) | [Unduh PCRemote.exe](https://github.com/Ceryann/PC-Remote/releases/latest/download/PCRemote.exe) | Wajib. Windows 10/11 64-bit. Tanpa instalasi, cukup klik dua kali. |
+| **Driver ViGEmBus** | [Unduh ViGEmBus 1.22.0](https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe) | Hanya untuk tab **Controller**. Pasang sekali saja. Touchpad dan keyboard tidak membutuhkannya. |
 
-| Cara | Langkah |
-|---|---|
-| **Router yang sama** (paling stabil) | Sambungkan HP dan laptop ke Wi-Fi/router yang sama, jalankan server, scan QR. |
-| **Hotspot HP** | Hidupkan hotspot di HP, sambungkan laptop ke sana. Tidak butuh kuota karena hanya lokal. |
-| **Hotspot Windows** | Hidupkan Mobile Hotspot di laptop, sambungkan HP ke sana. |
+Semua versi ada di halaman [Releases](https://github.com/Ceryann/PC-Remote/releases). Halaman resmi driver: [ViGEmBus Releases](https://github.com/nefarius/ViGEmBus/releases).
 
-Jika QR tidak terbuka:
-- Server mencetak alamat alternatif bila laptop punya lebih dari satu jaringan. Coba satu per satu di browser HP.
-- Atau paksa IP: `set HOST_IP=192.168.x.x` sebelum menjalankan server (cek IP lewat `ipconfig`).
-- Wi-Fi tamu (guest) atau Wi-Fi publik sering memisahkan antar perangkat (client isolation), jadi HP dan laptop tidak saling terlihat. Pakai jaringan utama atau hotspot.
-- Pastikan jaringan di Windows bertipe **Private** dan port sudah diizinkan di Firewall (perintah `netsh` dicetak server).
+> Windows SmartScreen bisa menampilkan peringatan "tidak dikenal" untuk file .exe baru. Pilih **More info**, lalu **Run anyway**.
 
-Bluetooth tidak didukung: browser HP tidak bisa berperan sebagai mouse/keyboard/gamepad Bluetooth.
+## Mulai cepat
 
-## Gestur touchpad
+1. Unduh dan jalankan **PCRemote.exe**. Jendela hitam akan menampilkan **QR code**.
+2. Kalau muncul jendela Windows Firewall, centang **Private networks** lalu **Allow access**.
+3. Pastikan HP dan laptop ada di **Wi-Fi atau router yang sama**.
+4. Scan QR dengan kamera HP, lalu buka link-nya di browser.
+5. Kalau di bagian atas halaman muncul **Connected** (titik hijau), kamu siap memakainya.
+
+Jendela hitam harus tetap terbuka selama dipakai. Menutupnya menghentikan server. Alamat dan token berubah setiap server dijalankan ulang, jadi scan QR lagi setelah menjalankan ulang.
+
+## Panduan dan fitur
+
+### Touchpad
+
 | Gestur | Aksi |
 |---|---|
-| 1 jari geser / tap | Kursor / klik kiri |
-| Tahan lalu geser | Drag & drop |
-| 2 jari tap / geser / pinch | Klik kanan / scroll / zoom (Ctrl+scroll) |
+| 1 jari geser | Gerakkan kursor |
+| 1 jari tap | Klik kiri |
+| 1 jari tahan, lalu geser | Drag and drop |
+| 2 jari tap | Klik kanan |
+| 2 jari geser | Scroll (atas-bawah dan kiri-kanan) |
+| 2 jari pinch | Zoom (Ctrl + scroll) |
 | 3 jari tap | Klik tengah |
-| 3 jari geser kanan/kiri | Alt+Tab / Alt+Shift+Tab |
-| 3 jari geser atas/bawah | Task View / Show desktop |
-| 4 jari tap | Show desktop (Win+D) |
-| 4 jari geser kiri/kanan | Pindah virtual desktop |
-| 4 jari geser atas/bawah | Task View / Show desktop |
+| 3 jari geser kanan / kiri | Alt+Tab / Alt+Shift+Tab |
+| 3 jari geser atas / bawah | Task View / Tampilkan desktop |
+| 4 jari tap | Tampilkan desktop (Win+D) |
+| 4 jari geser kiri / kanan | Pindah virtual desktop |
+| 4 jari geser atas / bawah | Task View / Tampilkan desktop |
 
-Mapping 3 dan 4 jari ada di `touchend` pada `index.html`, mudah diubah.
+### Keyboard
 
-## Controller
-- Tab Controller masuk fullscreen + landscape. Posisi tombol bisa digeser lewat "Atur tata letak".
-- L2/R2 analog: tekan = penuh, geser jari ke atas = dilepas pelan.
-- Verifikasi: Windows > "Set Up USB Game Controllers" harus menampilkan **Wireless Controller**.
-- Jika sumbu Y analog terbalik, ubah `INVERT_STICK_Y = True` di `server.py`.
+- Ketuk kotak teks, lalu ketik dengan **keyboard bawaan HP**. Teks langsung muncul di laptop. **Enter** mengirim baris baru dan mengosongkan kotak.
+- Di atas kotak ada tombol laptop: **Ctrl, Alt, Shift, Win** (tap untuk mengaktifkan, otomatis lepas setelah dipakai), **Esc, Tab, Start, Backspace, Del, Enter**, panah, **Home, End, PgUp, PgDn, PrtSc**, dan **F1 sampai F12** (geser baris F ke samping).
+- Tombol Backspace, Del, panah, PgUp, dan PgDn berulang otomatis kalau ditahan.
+- Kombinasi tombol: aktifkan modifier lalu tekan tombol berikutnya. Contoh **Alt+Tab**: tap **Alt**, lalu **Tab**. Contoh **Ctrl+C**: tap **Ctrl**, lalu ketik huruf **c** di keyboard HP.
+- Karakter yang didukung hanya ASCII (tanpa emoji atau huruf beraksen).
 
-## Build satu file .exe
-```
-pip install pyinstaller
-pyinstaller --onefile --name PCRemote --add-data "index.html;." --collect-all vgamepad --collect-submodules uvicorn server.py
-```
+### Controller
 
-## Batasan v1
-- Ketikan hanya karakter ASCII (tanpa emoji/aksen).
-- 1 client aktif; client baru memutus client lama.
+- Laptop mengenali HP sebagai **Wireless Controller (DualShock 4)**. Butuh driver ViGEmBus.
+- Tombol lengkap: ✕ ○ □ △, L1/R1, L2/R2 (analog), L3/R3, Share, Options, PS, dan D-Pad.
+- **Analog dinamis**: sentuh area kosong di separuh kiri layar untuk analog kiri, atau separuh kanan untuk analog kanan. Lingkaran analog muncul di titik sentuhmu, seperti game mobile. Bisa diganti ke analog tetap.
+- **L2/R2** terkirim penuh saat ditekan. Geser jari ke atas sambil menahan untuk mengurangi nilainya.
+- **Getaran** tombol bisa diatur di Pengaturan.
+- Layar otomatis masuk fullscreen dan landscape saat membuka tab Controller.
+
+**Atur tata letak** (tombol di bagian bawah layar Controller):
+- Seret tombol ke posisi yang kamu mau.
+- Sentuh sebuah tombol sampai terpilih (garis biru), lalu pakai **Tombol +/-** untuk mengubah ukuran tombol itu saja. **Semua +/-** mengubah ukuran semua tombol.
+- **Preset**: simpan beberapa tata letak (Preset 1, Preset 2, dan seterusnya). **+ Preset** membuat preset baru dari salinan yang sedang aktif (maksimal 8). **Hapus preset** menghapus yang aktif.
+- **Reset** mengembalikan preset yang aktif ke tata letak bawaan.
+- **Analog: Dinamis/Tetap** untuk mengganti mode analog.
+
+### Sistem
+
+- **Volume**: Mute/Unmute, Vol -/+ (tahan untuk mengulang), dan lompat -/+10%. Tiap langkah sekitar 2%.
+- **Kecerahan layar**: slider dan tombol -/+5. Hanya untuk layar bawaan laptop. Monitor eksternal dan PC desktop biasanya tidak didukung. Batas minimalnya 5%.
+
+### Pengaturan
+
+Sensitivitas kursor, kecepatan scroll, deadzone analog, ukuran semua tombol controller, dan durasi getaran (0 = mati). Semua disimpan di HP dan bertahan antar sesi.
+
+### Dua HP sekaligus
+
+- Maksimal 2 HP tersambung bersamaan, keduanya memakai QR yang sama.
+- Setiap HP mendapat controller virtual sendiri: **Player 1** dan **Player 2** (tampil di status, misalnya `Connected · P2 · 12 ms`).
+- Mouse dan keyboard dipakai bersama. HP ketiga yang tersambung menggantikan HP yang paling lama.
+
+### Status koneksi
+
+Di bagian atas halaman: **Connected** (hijau, beserta angka latensi dalam ms), **Reconnecting** (menyambung ulang otomatis kalau Wi-Fi sempat putus), atau **Disconnected**.
+
+## Menyambungkan HP
+
+HP dan laptop harus ada di jaringan lokal yang sama. Pilih salah satu:
+
+- **Router yang sama** (paling umum). Sebaiknya pakai band **5 GHz**.
+- **Hotspot HP**: laptop menyambung ke hotspot HP. Tidak butuh kuota. Atur hotspot ke 5 GHz.
+- **Mobile Hotspot Windows**: HP menyambung ke hotspot laptop.
+- **USB debugging** (opsional, tanpa Wi-Fi): colok kabel, aktifkan USB debugging di HP, jalankan `adb reverse tcp:8765 tcp:8765` (perlu Android Platform-Tools), lalu buka `http://localhost:8765/?token=...` di browser HP dengan token yang dicetak server.
+
+Bluetooth tidak didukung: browser HP tidak bisa berperan sebagai mouse, keyboard, atau gamepad Bluetooth.
+
+Keamanan: setiap sesi memakai token acak di URL, dan request tanpa token yang benar ditolak. Program hanya berjalan di jaringan lokal dan tidak membuka koneksi ke internet.
+
+## Pemecahan masalah
+
+| Masalah | Solusi |
+|---|---|
+| QR tidak terbuka atau HP tidak bisa terhubung | Pastikan satu jaringan. Izinkan di Firewall (centang Private). Wi-Fi tamu sering memisahkan perangkat, jadi pakai jaringan utama atau hotspot. Server juga mencetak alamat alternatif di jendela hitam. |
+| Input tidak jalan di game, Task Manager, atau jendela lain | Jalankan **PCRemote.exe sebagai Administrator** (klik kanan, Run as administrator). Pop-up UAC tidak bisa dikontrol program mana pun, jawab langsung di laptop. Game dengan anti-cheat sering memblokir input mouse dan keyboard, jadi pakai tab Controller. |
+| Controller tidak terdeteksi | Pasang **ViGEmBus**, lalu jalankan ulang PCRemote.exe. Cek di Windows **Set up USB game controllers** apakah muncul Wireless Controller. |
+| Kadang lag atau delay | Perhatikan angka ms di atas. Pakai 5 GHz, matikan hemat baterai di HP, colok charger laptop, dan jauhkan dari unduhan besar di jaringan yang sama. |
+| Kecerahan tidak berubah | Fitur ini hanya untuk layar bawaan laptop. Coba jalankan sebagai Administrator. |
+| Teks tidak muncul | Hanya karakter ASCII yang didukung. |
+
+## Untuk pengembang
+
+Server memakai Python (FastAPI, uvicorn, pyautogui, vgamepad) dan klien berupa satu halaman web tanpa dependensi eksternal.
+
+| File | Fungsi |
+|---|---|
+| `server.py` | Server WebSocket, QR, token, kontrol mouse/keyboard, controller, volume, kecerahan |
+| `index.html` | Halaman kontrol di HP |
+| `requirements.txt` | Dependensi Python |
+| `.github/workflows/build.yml` | Build `PCRemote.exe` lewat GitHub Actions |
+
+**Jalankan dari kode:** `pip install -r requirements.txt`, lalu `python server.py`. Variabel opsional: `PORT` (default 8765) dan `HOST_IP` (memaksa IP di QR).
+
+**Build dan rilis:**
+- Setiap push ke `main` membuat build dan menyimpannya sebagai *artifact* di tab Actions.
+- Untuk merilis versi baru: buka **Releases**, **Draft a new release**, buat tag baru (misalnya `v1.1.0`), lalu **Publish release**. Dalam beberapa menit `PCRemote.exe` otomatis terlampir di release itu, dan link **Unduh** di atas langsung menunjuk ke versi terbaru.
+- Workflow memasang `vgamepad` dengan menyalin paketnya karena `pip install vgamepad` macet di komputer build GitHub.
+
+## Batasan
+
+- Hanya Windows 10/11 (64-bit) dan klien Android.
+- Tanpa streaming layar, tanpa akses lewat internet, tanpa umpan balik getar dari game ke HP, dan tanpa gyro.
