@@ -1,5 +1,5 @@
 """PC Remote Controller - server untuk Windows 10/11.  Jalankan: python server.py"""
-import asyncio, ctypes, hmac, json, os, secrets, socket, subprocess, sys, threading
+import asyncio, base64, ctypes, hmac, json, os, queue, secrets, socket, subprocess, sys, threading
 from pathlib import Path
 
 import pyautogui, qrcode, uvicorn
@@ -60,6 +60,7 @@ def type_text(s):
 PAD_BTN = {"cross": "CROSS", "circle": "CIRCLE", "square": "SQUARE", "triangle": "TRIANGLE",
            "l1": "SHOULDER_LEFT", "r1": "SHOULDER_RIGHT", "l3": "THUMB_LEFT", "r3": "THUMB_RIGHT",
            "share": "SHARE", "options": "OPTIONS"}
+SPECIAL = {"ps": "DS4_SPECIAL_BUTTON_PS", "touchpad": "DS4_SPECIAL_BUTTON_TOUCHPAD"}
 DPAD = {"": "NONE", "n": "NORTH", "ne": "NORTHEAST", "e": "EAST", "se": "SOUTHEAST",
         "s": "SOUTH", "sw": "SOUTHWEST", "w": "WEST", "nw": "NORTHWEST"}
 MAX_CLIENTS = 2
@@ -82,8 +83,8 @@ def pad_event(m, slot):
     g, t = get_pad(slot), m["t"]
     if t == "b":
         down = bool(m["d"])
-        if m["n"] == "ps":
-            sp = vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_PS
+        if m["n"] in SPECIAL:
+            sp = getattr(vg.DS4_SPECIAL_BUTTONS, SPECIAL[m["n"]])
             (g.press_special_button if down else g.release_special_button)(sp)
         else:
             btn = getattr(vg.DS4_BUTTONS, "DS4_BUTTON_" + PAD_BTN[m["n"]])
@@ -142,6 +143,133 @@ threading.Thread(target=_bright_loop, daemon=True).start()
 def set_brightness(v):
     _bright["want"] = max(5, min(100, int(float(v))))  # minimal 5 agar layar tidak terlalu gelap
     _bright_ev.set()
+
+
+# ---------- volume (Windows Core Audio lewat PowerShell yang tetap hidup) ----------
+AUDIO_PS = r'''
+$src = @'
+using System;
+using System.Runtime.InteropServices;
+[Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IAudioEndpointVolume {
+  int f(); int g(); int h(); int i();
+  int SetMasterVolumeLevelScalar(float fLevel, Guid pguidEventContext);
+  int j();
+  int GetMasterVolumeLevelScalar(out float pfLevel);
+  int k(); int l(); int m(); int n();
+  int SetMute([MarshalAs(UnmanagedType.Bool)] bool bMute, Guid pguidEventContext);
+  int GetMute([MarshalAs(UnmanagedType.Bool)] out bool pbMute);
+}
+[Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IMMDevice {
+  int Activate(ref Guid id, int clsCtx, IntPtr activationParams, out IAudioEndpointVolume aev);
+}
+[Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IMMDeviceEnumerator {
+  int f();
+  int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice endpoint);
+}
+[ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] class MMDeviceEnumeratorComObject { }
+public class Audio {
+  static IAudioEndpointVolume Vol() {
+    var en = new MMDeviceEnumeratorComObject() as IMMDeviceEnumerator;
+    IMMDevice dev = null;
+    Marshal.ThrowExceptionForHR(en.GetDefaultAudioEndpoint(0, 1, out dev));
+    IAudioEndpointVolume epv = null;
+    var id = typeof(IAudioEndpointVolume).GUID;
+    Marshal.ThrowExceptionForHR(dev.Activate(ref id, 23, IntPtr.Zero, out epv));
+    return epv;
+  }
+  public static float Volume {
+    get { float v = -1; Marshal.ThrowExceptionForHR(Vol().GetMasterVolumeLevelScalar(out v)); return v; }
+    set { Marshal.ThrowExceptionForHR(Vol().SetMasterVolumeLevelScalar(value, Guid.Empty)); }
+  }
+  public static bool Mute {
+    get { bool m; Marshal.ThrowExceptionForHR(Vol().GetMute(out m)); return m; }
+    set { Marshal.ThrowExceptionForHR(Vol().SetMute(value, Guid.Empty)); }
+  }
+}
+'@
+Add-Type -TypeDefinition $src
+while ($true) {
+  $l = [Console]::In.ReadLine()
+  if ($l -eq $null) { break }
+  try {
+    $p = $l.Trim().Split(' ')
+    if ($p[0] -eq 'set') {
+      [Audio]::Volume = [float]$p[1] / 100
+      if (([float]$p[1] -gt 0) -and [Audio]::Mute) { [Audio]::Mute = $false }
+    }
+    elseif ($p[0] -eq 'toggle') { [Audio]::Mute = -not [Audio]::Mute }
+    $v = [int][math]::Round([Audio]::Volume * 100)
+    $m = 0
+    if ([Audio]::Mute) { $m = 1 }
+    [Console]::Out.WriteLine("OK $v $m")
+  } catch { [Console]::Out.WriteLine('ERR') }
+  [Console]::Out.Flush()
+}
+'''
+
+
+class AudioHelper:
+    """Proses PowerShell yang tetap hidup untuk membaca/mengatur volume master (dikompilasi sekali saja)."""
+
+    def __init__(self):
+        self.p = None
+        self.q = None
+        self.lock = threading.Lock()
+
+    def _start(self):
+        enc = base64.b64encode(AUDIO_PS.encode("utf-16-le")).decode()
+        self.p = subprocess.Popen(
+            ["powershell", "-NoProfile", "-NonInteractive", "-EncodedCommand", enc],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            text=True, bufsize=1, creationflags=0x08000000)
+        self.q = queue.Queue()
+        threading.Thread(target=self._reader, args=(self.p, self.q), daemon=True).start()
+
+    @staticmethod
+    def _reader(p, q):
+        for line in p.stdout:
+            line = line.strip()
+            if line.startswith(("OK", "ERR")):
+                q.put(line)
+
+    def ask(self, cmd):
+        """cmd: get | set N | toggle. Hasil: {"v": 0-100, "m": mute} atau None bila gagal."""
+        with self.lock:
+            try:
+                if self.p is None or self.p.poll() is not None:
+                    self._start()
+                self.p.stdin.write(cmd + "\n")
+                self.p.stdin.flush()
+                line = self.q.get(timeout=20)  # panggilan pertama lebih lama (kompilasi)
+            except Exception:
+                try:
+                    self.p.kill()
+                except Exception:
+                    pass
+                self.p = None
+                return None
+        if line.startswith("OK"):
+            _, v, m = line.split()
+            return {"v": int(v), "m": bool(int(m))}
+        return None
+
+
+audio = AudioHelper()
+_tasks = set()
+
+
+async def audio_dispatch(ws, m):
+    try:
+        if m["t"] == "vset":  # tanpa balasan; klien sudah menampilkan nilainya
+            await asyncio.to_thread(audio.ask, f"set {max(0, min(100, int(float(m['v']))))}")
+            return
+        res = await asyncio.to_thread(audio.ask, "get" if m["t"] == "vget" else "toggle")
+        await ws.send_text(json.dumps({"vol": res}))
+    except Exception:
+        pass
 
 
 # ---------- dispatcher ----------
@@ -223,6 +351,11 @@ async def ws_endpoint(ws: WebSocket, token: str = ""):
                 continue
             if m.get("t") == "bget":
                 await ws.send_text(json.dumps({"bright": await asyncio.to_thread(get_brightness)}))
+                continue
+            if m.get("t") in ("vget", "vset", "vmute"):
+                task = asyncio.create_task(audio_dispatch(ws, m))
+                _tasks.add(task)
+                task.add_done_callback(_tasks.discard)
                 continue
             try:
                 handle(m, slot)
