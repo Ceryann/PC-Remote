@@ -22,8 +22,17 @@ nav button.on{background:var(--acc);color:#07121f;font-weight:600}
 .row button.on{background:var(--acc);color:#07121f}
 .hint{color:#69717f;font-size:13px}
 #v-sys{flex-direction:column;padding:16px;gap:14px;overflow:auto;touch-action:pan-y}
-#v-sys h3{margin:6px 0 0;font-size:15px;font-weight:600}
-#v-sys input{width:100%;touch-action:auto}
+#v-sys .card{background:var(--card);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+#v-sys .ct{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;font-weight:600}
+#v-sys .ct b{color:var(--acc);font-weight:600}
+#v-sys .bar{display:flex;align-items:center;gap:6px;background:#242933;border-radius:14px;padding:8px 10px}
+#v-sys .bar button{flex:none;width:42px;height:42px;border:0;border-radius:50%;background:var(--btn);color:inherit;font:inherit;font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
+#v-sys .bar button.ic{background:transparent;width:44px}
+#v-sys .bar button.off{color:#ff7b7b}
+#v-sys .bar input{flex:1;min-width:0;height:36px;accent-color:var(--acc);touch-action:auto}
+#v-sys .bar .num{flex:none;min-width:36px;text-align:right;font-size:18px;font-weight:600}
+#v-sys .bar :disabled{opacity:.4}
+.row button:disabled{opacity:.4}
 #v-sys .row button{padding:18px 0}
 #v-sys small{color:#69717f}
 .row.scroll{overflow-x:auto;touch-action:pan-x}
@@ -90,6 +99,7 @@ function connect(){
   ws.onmessage=e=>{last=Date.now();const m=JSON.parse(e.data);if(m.err)toast(m.err);
     if(m.hello)slot=m.slot;
     if('bright' in m)onBright(m.bright);
+    if('vol' in m)onVol(m.vol);
     if(m.p){const r=Math.round(performance.now()-pingT);setSt(r>100?'var(--warn)':'var(--ok)',`Connected · P${slot} · ${r} ms`)}};
   ws.onclose=e=>{
     if(e.code===4000)return setSt('var(--bad)','Disconnected: digantikan perangkat ketiga');
@@ -107,7 +117,7 @@ setInterval(()=>{ // heartbeat: deteksi Wi-Fi putus
 let edit=false;
 function setEdit(v){edit=v;document.body.classList.toggle('edit',v);if(!v&&sel)select(null);$('#bEdit').textContent=v?'Selesai':'Atur tata letak'}
 function show(v){
-  if(v==='sys')send({t:'bget'});
+  if(v==='sys'){send({t:'bget'});send({t:'vget'})}
   $$('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
   $$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   document.body.classList.toggle('gpmode',v==='gp');
@@ -218,7 +228,7 @@ const LAYOUT=[ // id, tipe, label, x%, y%, kelas
 ['up','dp','▲',16,22],['down','dp','▼',16,46],['left','dp','◀',9,34],['right','dp','▶',23,34],
 ['triangle','b','△',86,22],['cross','b','✕',86,46],['square','b','□',79,34],['circle','b','○',93,34],
 ['l2','tr','L2',7,9,'sh'],['l1','b','L1',20,9,'sh'],['r1','b','R1',80,9,'sh'],['r2','tr','R2',93,9,'sh'],
-['share','b','Share',36,14,'sm'],['options','b','Options',64,14,'sm'],['ps','b','PS',50,34,'sm'],
+['touchpad','b','Touchpad',50,12,'sh'],['share','b','Share',36,14,'sm'],['options','b','Options',64,14,'sm'],['ps','b','PS',50,34,'sm'],
 ['l3','b','L3',40,84,'sm'],['r3','b','R3',60,84,'sm']];
 const gp=$('#gp'),dset=new Set(),els={};let sel=null,rt=0;
 /* analog dinamis: muncul di titik sentuh pada separuh kiri/kanan layar, seperti game mobile */
@@ -334,29 +344,70 @@ $('#bDel').onclick=function(){ // tap dua kali agar tidak terhapus tanpa sengaja
   else{this.textContent='Yakin? Tap lagi';dt=setTimeout(()=>{dt=0;this.textContent='Hapus preset'},3000)}
 };
 
-/* ---- sistem: volume & kecerahan ---- */
+/* ---- sistem: volume & kecerahan (bar seperti panel volume Windows) ---- */
 const sysv=$('#v-sys');
-const one=(lb,fn)=>{const b=document.createElement('button');b.textContent=lb;b.onclick=fn;return b};
 const hold=(lb,fn,ms)=>{ // tombol yang berulang saat ditahan
   const b=document.createElement('button');b.textContent=lb;let t=0,iv=0;
   const stop=()=>{clearTimeout(t);clearInterval(iv);t=iv=0};
   b.onpointerdown=e=>{e.preventDefault();stop();fn();t=setTimeout(()=>{iv=setInterval(()=>b.isConnected?fn():stop(),ms)},400)};
   b.onpointerup=b.onpointercancel=b.onpointerleave=stop;return b;
 };
-const vol=n=>send({t:'vol',n});
-sysv.innerHTML='<h3>Volume</h3><div class="row" id="rv1"></div><div class="row" id="rv2"></div><small>Tiap langkah sekitar 2%. Tahan tombol Vol untuk mengulang.</small><h3>Kecerahan layar: <span id="brv">-</span></h3><input type="range" id="bri" min="5" max="100" step="1" value="50"><div class="row" id="rb"></div><small id="brs">Hanya untuk layar bawaan laptop.</small>';
-$('#rv1').append(one('Mute / Unmute',()=>send({t:'keys',k:['volumemute']})));
-$('#rv2').append(one('-10%',()=>vol(-5)),hold('Vol -',()=>vol(-1),90),hold('Vol +',()=>vol(1),90),one('+10%',()=>vol(5)));
-const bri=$('#bri');let bt=0;
-function setBri(v){bri.value=v;$('#brv').textContent=bri.value+'%';clearTimeout(bt);bt=setTimeout(()=>send({t:'bset',v:+bri.value}),80)}
-bri.oninput=()=>setBri(bri.value);
-$('#rb').append(one('-5',()=>setBri(Math.max(5,+bri.value-5))),one('+5',()=>setBri(Math.min(100,+bri.value+5))));
-function onBright(v){ // jawaban server: kecerahan saat ini, atau null bila tidak didukung
-  const ok=v!==null&&v!==undefined;
-  bri.disabled=!ok;$$('#rb button').forEach(b=>b.disabled=!ok);
-  if(ok){bri.value=Math.max(5,v);$('#brv').textContent=v+'%';$('#brs').textContent='Hanya untuk layar bawaan laptop.'}
-  else{$('#brv').textContent='-';$('#brs').textContent='Kecerahan tidak didukung di layar ini (misalnya monitor eksternal atau PC desktop).'}
+const thr=(fn,ms)=>{let last=0,tm=0;return v=>{clearTimeout(tm);const w=ms-(Date.now()-last);if(w<=0){last=Date.now();fn(v)}else tm=setTimeout(()=>{last=Date.now();fn(v)},w)}};
+const ICON={
+  vol:'<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M3 9v6h4l5 4V5L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>',
+  mute:'<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.8 8.8 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>',
+  sun:'<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+};
+function bar(title,icon,onIcon,onStep,onSlide){ // [ikon] [-] ---bar--- [+] angka
+  const c=document.createElement('div');c.className='card';
+  const t=document.createElement('div');t.className='ct';t.textContent=title;
+  const w=document.createElement('div');w.className='bar';
+  const ic=document.createElement('button');ic.className='ic';ic.innerHTML=icon;
+  if(onIcon)ic.onclick=onIcon;else ic.style.pointerEvents='none';
+  const mi=hold('−',()=>onStep(-2),90),pl=hold('+',()=>onStep(2),90);
+  const sl=document.createElement('input');sl.type='range';sl.min=0;sl.max=100;sl.step=1;sl.value=0;sl.oninput=()=>onSlide(+sl.value);
+  const num=document.createElement('b');num.className='num';num.textContent='-';
+  const note=document.createElement('small');
+  w.append(ic,mi,sl,pl,num);c.append(t,w,note);sysv.append(c);
+  return {ic,mi,pl,sl,num,note};
 }
+
+// Volume: ketuk ikon speaker = mute; nilai dibaca/diatur lewat Windows Core Audio di server
+let vv=null,vm=false,vfb=false;
+const sendV=thr(v=>send({t:'vset',v}),90);
+const V=bar('Volume',ICON.vol,
+  ()=>{if(vfb)send({t:'keys',k:['volumemute']});else if(vv!==null)send({t:'vmute'})},
+  d=>{if(vfb)send({t:'vol',n:Math.sign(d)});else if(vv!==null)setVol(vv+d)},
+  v=>{if(vv!==null)setVol(v)});
+const vAll=[V.ic,V.mi,V.pl,V.sl];
+function drawV(){
+  V.sl.value=vv===null?0:vv;V.num.textContent=vv===null?'-':vv;
+  V.ic.innerHTML=vm?ICON.mute:ICON.vol;V.ic.classList.toggle('off',vm);V.num.style.opacity=vm?.5:1;
+}
+function setVol(v){vv=Math.max(0,Math.min(100,Math.round(v)));if(vv>0)vm=false;drawV();sendV(vv)}
+function onVol(x){ // jawaban server: {v,m} atau null bila volume tidak bisa dibaca
+  if(x){vfb=false;vv=x.v;vm=x.m;vAll.forEach(e=>e.disabled=false);V.note.textContent='Ketuk ikon speaker untuk mute. Tombol - dan + mengubah 2%.'}
+  else{vfb=true;vv=null;vm=false;vAll.forEach(e=>e.disabled=false);V.sl.disabled=true;V.note.textContent='Volume tidak bisa dibaca. Tombol - dan + serta speaker memakai tombol volume Windows (sekitar 2% per langkah).'}
+  drawV();
+}
+vAll.forEach(e=>e.disabled=true);V.note.textContent='Membaca volume...';
+
+// Kecerahan: bar yang sama (hanya layar bawaan laptop)
+let curB=null;
+const sendB=thr(v=>send({t:'bset',v}),120);
+const Br=bar('Kecerahan layar',ICON.sun,null,
+  d=>{if(curB!==null)setBri(curB+d)},
+  v=>{if(curB!==null)setBri(v)});
+Br.sl.min=5;
+const bAll=[Br.mi,Br.pl,Br.sl];
+function setBri(v){curB=Math.max(5,Math.min(100,Math.round(v)));Br.sl.value=curB;Br.num.textContent=curB;sendB(curB)}
+function onBright(v){ // jawaban server: kecerahan saat ini, atau null bila tidak didukung
+  const ok=v!==null&&v!==undefined;curB=ok?Math.max(5,v):null;
+  bAll.forEach(e=>e.disabled=!ok);
+  Br.sl.value=ok?curB:5;Br.num.textContent=ok?curB:'-';
+  Br.note.textContent=ok?'Hanya untuk layar bawaan laptop. Tombol - dan + mengubah 2%.':'Kecerahan tidak didukung di layar ini (misalnya monitor eksternal atau PC desktop).';
+}
+bAll.forEach(e=>e.disabled=true);Br.note.textContent='Membaca kecerahan...';
 
 /* ---- pengaturan ---- */
 [['sens',.5,4,.1,'Sensitivitas kursor'],['scroll',.3,3,.1,'Kecepatan scroll'],['dead',0,.4,.01,'Deadzone analog'],['size',.6,2,.05,'Ukuran semua tombol controller'],['vib',0,40,1,'Getaran tombol (ms, 0 = mati)']].forEach(([k,mn,mx,st,lb])=>{
