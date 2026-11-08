@@ -62,7 +62,7 @@ Jendela hitam harus tetap terbuka selama dipakai. Menutupnya menghentikan server
 ### Controller
 
 - Laptop mengenali HP sebagai **Wireless Controller (DualShock 4)**. Butuh driver ViGEmBus.
-- Tombol lengkap: ✕ ○ □ △, L1/R1, L2/R2 (analog), L3/R3, Share, Options, PS, dan D-Pad.
+- Tombol lengkap: ✕ ○ □ △, L1/R1, L2/R2 (analog), L3/R3, Share, Options, PS, **Touchpad** (hanya klik seperti menekan touchpad DualShock 4, area sentuhnya tidak aktif), dan D-Pad.
 - **Analog dinamis**: sentuh area kosong di separuh kiri layar untuk analog kiri, atau separuh kanan untuk analog kanan. Lingkaran analog muncul di titik sentuhmu, seperti game mobile. Bisa diganti ke analog tetap.
 - **L2/R2** terkirim penuh saat ditekan. Geser jari ke atas sambil menahan untuk mengurangi nilainya.
 - **Getaran** tombol bisa diatur di Pengaturan.
@@ -77,8 +77,9 @@ Jendela hitam harus tetap terbuka selama dipakai. Menutupnya menghentikan server
 
 ### Sistem
 
-- **Volume**: Mute/Unmute, Vol -/+ (tahan untuk mengulang), dan lompat -/+10%. Tiap langkah sekitar 2%.
-- **Kecerahan layar**: slider dan tombol -/+5. Hanya untuk layar bawaan laptop. Monitor eksternal dan PC desktop biasanya tidak didukung. Batas minimalnya 5%.
+- Volume dan kecerahan memakai **bar geser** seperti panel volume Windows: ikon di kiri, tombol **-** dan **+** di sisi bar (tiap ketukan 2%, tahan untuk mengulang), dan angka persen di kanan.
+- **Volume**: ketuk **ikon speaker** untuk Mute / Unmute. Volume dibaca dan diatur lewat Windows Core Audio (dijalankan lewat PowerShell di balik layar). Kalau gagal, bar dinonaktifkan dan tombol -/+ memakai tombol volume bawaan Windows.
+- **Kecerahan layar**: bar yang sama (5% sampai 100%). Hanya untuk layar bawaan laptop. Monitor eksternal dan PC desktop biasanya tidak didukung.
 
 ### Pengaturan
 
