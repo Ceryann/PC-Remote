@@ -1,5 +1,7 @@
 # PC Remote
 
+[![Bahasa Indonesia](https://img.shields.io/badge/Bahasa%20Indonesia-0969da?style=for-the-badge)](README.md) [![English](https://img.shields.io/badge/English-6e7781?style=for-the-badge)](README.en.md)
+
 PC Remote mengubah HP Android menjadi **touchpad, keyboard, dan gamepad PS4 (DualShock 4)** untuk laptop Windows. Tidak ada aplikasi yang dipasang di HP: cukup scan QR dari program di laptop, lalu buka di browser. Semuanya berjalan lewat Wi-Fi atau jaringan lokal, tanpa internet.
 
 - Tanpa APK di HP, pairing cukup scan QR
@@ -129,6 +131,7 @@ Server memakai Python (FastAPI, uvicorn, pyautogui, vgamepad) dan klien berupa s
 | `index.html` | Halaman kontrol di HP |
 | `requirements.txt` | Dependensi Python |
 | `.github/workflows/build.yml` | Build `PCRemote.exe` lewat GitHub Actions |
+| `README.md` / `README.en.md` | Dokumentasi (Indonesia / English) |
 
 **Jalankan dari kode:** `pip install -r requirements.txt`, lalu `python server.py`. Variabel opsional: `PORT` (default 8765) dan `HOST_IP` (memaksa IP di QR).
 
