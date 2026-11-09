@@ -1,6 +1,6 @@
 # PC Remote
 
-**Language:** [Bahasa Indonesia](README.md) | English
+[![Bahasa Indonesia](https://img.shields.io/badge/Bahasa%20Indonesia-6e7781?style=for-the-badge)](README.md) [![English](https://img.shields.io/badge/English-0969da?style=for-the-badge)](README.en.md)
 
 PC Remote turns an Android phone into a **touchpad, keyboard, and PS4 (DualShock 4) gamepad** for a Windows laptop. Nothing is installed on the phone: just scan a QR code shown by the program on your laptop and open it in the browser. Everything runs over Wi-Fi or your local network, with no internet needed.
 
