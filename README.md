@@ -36,7 +36,9 @@ Jendela hitam harus tetap terbuka selama dipakai. Menutupnya menghentikan server
 
 ## Panduan dan fitur
 
-### Touchpad
+### Touchpad dan keyboard
+
+Halaman **Touchpad** berisi area touchpad yang besar di atas. Di bawahnya ada kotak ketik (keyboard HP) dan tombol-tombol penting. Geser ke bawah (di area tombol) untuk tombol yang jarang dipakai.
 
 | Gestur | Aksi |
 |---|---|
@@ -47,16 +49,18 @@ Jendela hitam harus tetap terbuka selama dipakai. Menutupnya menghentikan server
 | 2 jari geser | Scroll (atas-bawah dan kiri-kanan) |
 | 2 jari pinch | Zoom (Ctrl + scroll) |
 | 3 jari tap | Klik tengah |
-| 3 jari geser kanan / kiri | Alt+Tab / Alt+Shift+Tab |
+| 3 jari geser kiri / kanan | Pindah tab browser (tab berikutnya / sebelumnya, Ctrl+Tab) |
 | 3 jari geser atas / bawah | Task View / Tampilkan desktop |
 | 4 jari tap | Tampilkan desktop (Win+D) |
-| 4 jari geser kiri / kanan | Pindah virtual desktop |
+| 4 jari geser kiri / kanan | Pindah jendela (Alt+Tab / Alt+Shift+Tab) |
 | 4 jari geser atas / bawah | Task View / Tampilkan desktop |
 
-### Keyboard
+> Sebagian merek HP memakai geser 3 jari ke bawah untuk screenshot, dan sistem Android mengambil gestur itu lebih dulu dari browser. Kalau layar HP-mu malah tangkapan layar, matikan gestur tersebut di pengaturan HP (biasanya di Pengaturan, Gestur atau Gerakan, lalu screenshot 3 jari).
+
+#### Keyboard (di bawah touchpad, halaman yang sama)
 
 - Ketuk kotak teks, lalu ketik dengan **keyboard bawaan HP**. Teks langsung muncul di laptop. **Enter** mengirim baris baru dan mengosongkan kotak.
-- Di atas kotak ada tombol laptop: **Ctrl, Alt, Shift, Win** (tap untuk mengaktifkan, otomatis lepas setelah dipakai), **Esc, Tab, Start, Backspace, Del, Enter**, panah, **Home, End, PgUp, PgDn, PrtSc**, dan **F1 sampai F12** (geser baris F ke samping).
+- Di bawah kotak ada tombol penting: **Ctrl, Alt, Shift, Win** (tap untuk mengaktifkan, otomatis lepas setelah dipakai), **Esc, Tab, Start, Backspace, Del, Enter**, panah, serta **◀ Tab** dan **Tab ▶** untuk pindah tab browser. Geser ke bawah untuk tombol lainnya: **Home, End, PgUp, PgDn, PrtSc, Ins, F1 sampai F12**, **Alt+Tab**, **Task View**, dan pindah virtual desktop.
 - Tombol Backspace, Del, panah, PgUp, dan PgDn berulang otomatis kalau ditahan.
 - Kombinasi tombol: aktifkan modifier lalu tekan tombol berikutnya. Contoh **Alt+Tab**: tap **Alt**, lalu **Tab**. Contoh **Ctrl+C**: tap **Ctrl**, lalu ketik huruf **c** di keyboard HP.
 - Karakter yang didukung hanya ASCII (tanpa emoji atau huruf beraksen).
