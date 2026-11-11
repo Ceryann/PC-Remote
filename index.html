@@ -156,7 +156,7 @@ function swipe(n,tx,ty){ // geser 3/4 jari: dijalankan begitu jaraknya cukup, ta
   else{keys(['win','d']);flash('Tampilkan desktop')}
 }
 pad.addEventListener('touchstart',e=>{
-  e.preventDefault();const n=e.touches.length;
+  e.preventDefault();settle();const n=e.touches.length;
   if(!T)T={t0:Date.now(),max:0,tx:0,ty:0,moved:false,drag:false,fired:false,z:0,zt:0};
   T.max=Math.max(T.max,n);T.n=n;T.c=cen(e.touches);T.d=n===2?dist(e.touches):0;
   clearTimeout(T.lp);
@@ -196,9 +196,14 @@ pad.addEventListener('touchcancel',()=>{if(T){clearTimeout(T.lp);if(T.drag)send(
 const mods=new Set(),tx=$('#txt'),SENT='\u200B';let prev='';
 // Kotak teks selalu diawali 1 karakter tak terlihat (SENT) supaya backspace HP tetap terkirim saat kotak tampak kosong.
 const resetTx=()=>{tx.value=SENT;prev=SENT};
+// Keyboard HP terbuka bila area tampak (visualViewport) jauh lebih pendek dari jendela.
+const kbOpen=()=>!!window.visualViewport&&window.visualViewport.height<window.innerHeight*0.85;
+// Fokus basi: keyboard sudah ditutup tapi kotak teks masih fokus, sehingga menyentuh touchpad memunculkan keyboard lagi.
+// Selama keyboard memang terbuka, fokus dibiarkan agar mengetik tetap lancar.
+function settle(){if(document.activeElement===tx&&!kbOpen())tx.blur()}
 const R=(...bs)=>{const d=document.createElement('div');d.className='row';d.append(...bs);return d};
 const B=(lb,fn,on)=>{const b=document.createElement('button');b.textContent=lb;if(on)b.className='on';
-  b.onmousedown=b.onpointerdown=e=>e.preventDefault(); // jaga fokus agar keyboard HP tidak menutup
+  b.onmousedown=b.onpointerdown=e=>{settle();e.preventDefault()}; // jaga fokus agar keyboard HP tidak menutup
   b.onclick=fn;return b};
 function key(k){send({t:'keys',k:[...mods,k]});if(mods.size){mods.clear();drawKeys()}}
 const K=(lb,k)=>B(lb,()=>key(k));
@@ -206,7 +211,7 @@ const KR=(lb,k)=>{ // ketuk = sekali tekan; tahan = berulang; menggeser halaman 
   const b=B(lb,null);let t=0,iv=0,rep=false;
   const stop=()=>{clearTimeout(t);clearInterval(iv);t=iv=0};
   b.onclick=null;
-  b.onpointerdown=e=>{e.preventDefault();stop();rep=false;
+  b.onpointerdown=e=>{settle();e.preventDefault();stop();rep=false;
     t=setTimeout(()=>{rep=true;if(!b.isConnected)return;key(k);iv=setInterval(()=>{if(!b.isConnected)return stop();key(k)},45)},380)};
   b.onpointerup=()=>{const was=rep;stop();if(!was&&b.isConnected)key(k)};
   b.onpointercancel=b.onpointerleave=stop;
