@@ -36,7 +36,9 @@ Keep the black window open while using the remote. Closing it stops the server. 
 
 ## Guide and features
 
-### Touchpad
+### Touchpad and keyboard
+
+The **Touchpad** page has a large touchpad area at the top. Below it are a text box (your phone's keyboard) and the most-used keys. Scroll down (over the keys area) for the rarely used keys.
 
 | Gesture | Action |
 |---|---|
@@ -47,16 +49,18 @@ Keep the black window open while using the remote. Closing it stops the server. 
 | 2 finger swipe | Scroll (vertical and horizontal) |
 | 2 finger pinch | Zoom (Ctrl + scroll) |
 | 3 finger tap | Middle click |
-| 3 finger swipe right / left | Alt+Tab / Alt+Shift+Tab |
+| 3 finger swipe left / right | Switch browser tab (next / previous, Ctrl+Tab) |
 | 3 finger swipe up / down | Task View / Show desktop |
 | 4 finger tap | Show desktop (Win+D) |
-| 4 finger swipe left / right | Switch virtual desktop |
+| 4 finger swipe left / right | Switch window (Alt+Tab / Alt+Shift+Tab) |
 | 4 finger swipe up / down | Task View / Show desktop |
 
-### Keyboard
+> Some phone brands use a 3-finger swipe down to take a screenshot, and Android handles that gesture before the browser does. If your phone takes a screenshot instead, turn that gesture off in the phone settings (usually under Gestures or Motions, then 3-finger screenshot).
+
+#### Keyboard (below the touchpad, same page)
 
 - Tap the text box, then type with your **phone's own keyboard**. The text appears on the laptop right away. **Enter** sends a new line and clears the box.
-- Above the box are laptop keys: **Ctrl, Alt, Shift, Win** (tap to arm, released automatically after one use), **Esc, Tab, Start, Backspace, Del, Enter**, arrow keys, **Home, End, PgUp, PgDn, PrtSc**, and **F1 to F12** (swipe the F-key row sideways).
+- Below the box are the most-used keys: **Ctrl, Alt, Shift, Win** (tap to arm, released automatically after one use), **Esc, Tab, Start, Backspace, Del, Enter**, arrow keys, plus **◀ Tab** and **Tab ▶** to switch browser tabs. Scroll down for more: **Home, End, PgUp, PgDn, PrtSc, Ins, F1 to F12**, **Alt+Tab**, **Task View**, and virtual desktop switching.
 - Backspace, Del, the arrow keys, PgUp, and PgDn repeat automatically while held.
 - Key combinations: arm a modifier, then press the next key. Example **Alt+Tab**: tap **Alt**, then **Tab**. Example **Ctrl+C**: tap **Ctrl**, then type the letter **c** on the phone keyboard.
 - Only ASCII characters are supported (no emoji or accented letters).
