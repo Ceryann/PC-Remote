@@ -13,10 +13,16 @@ nav{display:flex;gap:6px;padding:6px;background:var(--card)}
 nav button{flex:1;min-width:0;padding:11px 2px;border:0;border-radius:8px;background:var(--btn);color:inherit;font:inherit;font-size:13px}
 nav button.on{background:var(--acc);color:#07121f;font-weight:600}
 .view{display:none;flex:1;min-height:0}.view.on{display:flex}
-#pad{flex:1;margin:8px;border-radius:14px;border:1px solid #2b3039;background:#14171b;display:flex;align-items:center;justify-content:center;text-align:center;color:#69717f;padding:24px;line-height:1.7}
-#v-kb{flex-direction:column;padding:8px;gap:6px;overflow:auto}
+#pad{flex:none;position:relative;height:46vh;min-height:230px;margin:8px;border-radius:14px;border:1px solid #2b3039;background:#14171b;display:flex;align-items:center;justify-content:center;text-align:center;color:#69717f;padding:16px;font-size:12.5px;line-height:1.7}
+#v-pad{flex-direction:column;overflow-y:auto;touch-action:pan-y}
+#kbp{flex:none;padding:0 8px 16px;display:flex;flex-direction:column;gap:6px}
+#kbp,#kbp *{touch-action:pan-y}
+#kbp #txt{touch-action:auto}
+#kbp .row button{padding:11px 0}
+#gst{position:absolute;left:0;right:0;bottom:10px;opacity:0;transition:opacity .2s;color:var(--acc);font-size:14px;font-weight:600;pointer-events:none}
+.hint2{color:#69717f;font-size:13px;margin-top:10px}
 #txt{width:100%;background:var(--card);color:inherit;border:1px solid #2b3039;border-radius:8px;padding:10px;font:inherit;-webkit-user-select:text;user-select:text;touch-action:auto;resize:none}
-#keys{display:flex;flex-direction:column;gap:6px}
+#keys,#keys2{display:flex;flex-direction:column;gap:6px}
 .row{display:flex;gap:4px}
 .row button{flex:1;min-width:0;padding:13px 0;border:0;border-radius:6px;background:var(--btn);color:inherit;font:inherit;font-size:14px}
 .row button.on{background:var(--acc);color:#07121f}
@@ -68,9 +74,8 @@ body.edit .c{outline:2px dashed var(--warn)}
 </style></head><body>
 <div id="app">
 <div id="stw"><span id="st"></span><span id="stt">Reconnecting</span></div>
-<nav><button data-v="pad" class="on">Touchpad</button><button data-v="kb">Keyboard</button><button data-v="gp">Controller</button><button data-v="sys">Sistem</button><button data-v="set">Pengaturan</button></nav>
-<section class="view on" id="v-pad"><div id="pad">1 jari: geser = kursor, tap = klik kiri, tahan lalu geser = drag<br>2 jari: tap = klik kanan, geser = scroll, pinch = zoom<br>3 jari: tap = klik tengah, geser = Alt+Tab<br>4 jari: tap = tampilkan desktop, geser = ganti desktop</div></section>
-<section class="view" id="v-kb"><div id="keys"></div><div class="hint">Ketuk kotak di bawah lalu ketik dengan keyboard HP, langsung muncul di PC. Enter mengosongkan kotak.</div><textarea id="txt" rows="3" enterkeyhint="send" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea></section>
+<nav><button data-v="pad" class="on">Touchpad</button><button data-v="gp">Controller</button><button data-v="sys">Sistem</button><button data-v="set">Pengaturan</button></nav>
+<section class="view on" id="v-pad"><div id="pad">1 jari: geser = kursor, tap = klik kiri, tahan lalu geser = drag<br>2 jari: tap = klik kanan, geser = scroll, pinch = zoom<br>3 jari: tap = klik tengah, geser kiri/kanan = pindah tab, atas = Task View<br>4 jari: tap = tampilkan desktop, geser kiri/kanan = pindah jendela (Alt+Tab)<div id="gst"></div></div><div id="kbp"><div class="hint">Ketuk kotak lalu ketik dengan keyboard HP. Enter mengosongkan kotak.</div><textarea id="txt" rows="2" enterkeyhint="send" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea><div id="keys"></div><div class="hint2">Tombol lainnya</div><div id="keys2"></div></div></section>
 <section class="view" id="v-gp"><div id="gp"><div id="gpbar"><div class="ed" id="gpPre"></div><button id="bEdit">Atur tata letak</button><button class="ed" id="bMinus">Tombol −</button><button class="ed" id="bPlus">Tombol +</button><button class="ed" id="bAllMinus">Semua −</button><button class="ed" id="bAllPlus">Semua +</button><button class="ed" id="bDyn"></button><button class="ed" id="bDel">Hapus preset</button><button class="ed" id="bReset">Reset</button><button id="bExit">Keluar</button></div></div></section>
 <section class="view" id="v-sys"></section><section class="view" id="v-set"></section>
 </div>
@@ -140,9 +145,19 @@ function flush(){raf=0;if(acc.x||acc.y){send({t:'mv',dx:acc.x,dy:acc.y});acc.x=a
 const cen=ts=>{let x=0,y=0;for(const t of ts){x+=t.clientX;y+=t.clientY}return{x:x/ts.length,y:y/ts.length}};
 const dist=ts=>Math.hypot(ts[0].clientX-ts[1].clientX,ts[0].clientY-ts[1].clientY);
 const keys=k=>send({t:'keys',k});
+const gst=$('#gst');let gt=0;
+function flash(t){gst.textContent=t;gst.style.opacity=1;clearTimeout(gt);gt=setTimeout(()=>{gst.style.opacity=0},900)}
+function swipe(n,tx,ty){ // geser 3/4 jari: dijalankan begitu jaraknya cukup, tanpa menunggu jari diangkat
+  const h=Math.abs(tx)>Math.abs(ty),l=tx<0,u=ty<0;
+  if(h){
+    if(n===3){keys(l?['ctrl','tab']:['ctrl','shift','tab']);flash(l?'Tab berikutnya':'Tab sebelumnya')}
+    else{keys(l?['alt','tab']:['alt','shift','tab']);flash(l?'Jendela berikutnya':'Jendela sebelumnya')}
+  }else if(u){keys(['win','tab']);flash('Task View')}
+  else{keys(['win','d']);flash('Tampilkan desktop')}
+}
 pad.addEventListener('touchstart',e=>{
   e.preventDefault();const n=e.touches.length;
-  if(!T)T={t0:Date.now(),max:0,tx:0,ty:0,moved:false,drag:false,z:0,zt:0};
+  if(!T)T={t0:Date.now(),max:0,tx:0,ty:0,moved:false,drag:false,fired:false,z:0,zt:0};
   T.max=Math.max(T.max,n);T.n=n;T.c=cen(e.touches);T.d=n===2?dist(e.touches):0;
   clearTimeout(T.lp);
   if(n===1)T.lp=setTimeout(()=>{if(!T.moved&&T.n===1){T.drag=true;send({t:'down',b:'l'});navigator.vibrate&&navigator.vibrate(20)}},400);
@@ -151,7 +166,8 @@ pad.addEventListener('touchmove',e=>{
   e.preventDefault();if(!T)return;
   const n=e.touches.length,c=cen(e.touches),dx=c.x-T.c.x,dy=c.y-T.c.y;
   T.c=c;T.tx+=dx;T.ty+=dy;
-  if(Math.hypot(T.tx,T.ty)>8){T.moved=true;clearTimeout(T.lp)}
+  if(Math.hypot(T.tx,T.ty)>(T.max>=3?14:8)){T.moved=true;clearTimeout(T.lp)}
+  if(T.max>=3&&n>=3&&!T.fired&&Math.hypot(T.tx,T.ty)>45){T.fired=true;swipe(T.max,T.tx,T.ty)}
   if(n===1&&T.max===1){acc.x+=dx*S.sens;acc.y+=dy*S.sens;if(!raf)raf=requestAnimationFrame(flush)}
   else if(n===2&&T.max===2){
     const d=dist(e.touches),pd=d-T.d;T.d=d;T.zt+=Math.abs(pd);if(T.zt>8)T.moved=true;
@@ -168,19 +184,15 @@ pad.addEventListener('touchend',e=>{
   if(e.touches.length){T.c=cen(e.touches);T.n=e.touches.length;T.d=T.n===2?dist(e.touches):0;return}
   clearTimeout(T.lp);flush();
   if(T.drag)send({t:'up',b:'l'});
-  else if(!T.moved&&Date.now()-T.t0<300){
-    if(T.max<=3)send({t:'click',b:['','l','r','m'][T.max]});
-    else keys(['win','d']);
-  }else if(T.max>=3&&Math.hypot(T.tx,T.ty)>40){
-    const h=Math.abs(T.tx)>Math.abs(T.ty),r=T.tx>0,u=T.ty<0;
-    if(T.max===3)keys(h?(r?['alt','tab']:['alt','shift','tab']):(u?['win','tab']:['win','d']));
-    else keys(h?['ctrl','win',r?'left':'right']:(u?['win','tab']:['win','d']));
+  else if(!T.fired&&!T.moved&&Date.now()-T.t0<(T.max>=3?400:300)){
+    if(T.max<=3){send({t:'click',b:['','l','r','m'][T.max]});if(T.max===3)flash('Klik tengah')}
+    else{keys(['win','d']);flash('Tampilkan desktop')}
   }
   T=null;
 },{passive:false});
 pad.addEventListener('touchcancel',()=>{if(T){clearTimeout(T.lp);if(T.drag)send({t:'up',b:'l'});T=null}});
 
-/* ---- keyboard: ketik pakai keyboard HP, tombol laptop di bar atas ---- */
+/* ---- keyboard: ketik pakai keyboard HP; tombol laptop di bawah touchpad ---- */
 const mods=new Set(),tx=$('#txt'),SENT='\u200B';let prev='';
 // Kotak teks selalu diawali 1 karakter tak terlihat (SENT) supaya backspace HP tetap terkirim saat kotak tampak kosong.
 const resetTx=()=>{tx.value=SENT;prev=SENT};
@@ -190,22 +202,27 @@ const B=(lb,fn,on)=>{const b=document.createElement('button');b.textContent=lb;i
   b.onclick=fn;return b};
 function key(k){send({t:'keys',k:[...mods,k]});if(mods.size){mods.clear();drawKeys()}}
 const K=(lb,k)=>B(lb,()=>key(k));
-const KR=(lb,k)=>{ // tombol yang berulang otomatis saat ditahan
-  const b=B(lb,null);let t=0,iv=0;
+const KR=(lb,k)=>{ // ketuk = sekali tekan; tahan = berulang; menggeser halaman (scroll) membatalkan
+  const b=B(lb,null);let t=0,iv=0,rep=false;
   const stop=()=>{clearTimeout(t);clearInterval(iv);t=iv=0};
   b.onclick=null;
-  b.onpointerdown=e=>{e.preventDefault();stop();key(k);
-    t=setTimeout(()=>{if(!b.isConnected)return;iv=setInterval(()=>{if(!b.isConnected)return stop();key(k)},45)},380)};
-  b.onpointerup=b.onpointercancel=b.onpointerleave=stop;
+  b.onpointerdown=e=>{e.preventDefault();stop();rep=false;
+    t=setTimeout(()=>{rep=true;if(!b.isConnected)return;key(k);iv=setInterval(()=>{if(!b.isConnected)return stop();key(k)},45)},380)};
+  b.onpointerup=()=>{const was=rep;stop();if(!was&&b.isConnected)key(k)};
+  b.onpointercancel=b.onpointerleave=stop;
   return b;
 };
 function drawKeys(){
-  const box=$('#keys');box.replaceChildren();
+  const box=$('#keys'),box2=$('#keys2');box.replaceChildren();box2.replaceChildren();
+  // Tombol penting (terlihat di layar awal)
   box.append(R(...['ctrl','alt','shift','win'].map(m=>B(m[0].toUpperCase()+m.slice(1),()=>{mods.has(m)?mods.delete(m):mods.add(m);drawKeys()},mods.has(m)))));
   box.append(R(K('Esc','esc'),K('Tab','tab'),K('Start','win'),KR('⌫','backspace'),KR('Del','delete'),K('Enter','enter')));
-  box.append(R(KR('←','left'),KR('↑','up'),KR('↓','down'),KR('→','right'),K('Home','home'),K('End','end')));
-  const f=R(...Array.from({length:12},(_,i)=>K('F'+(i+1),'f'+(i+1))),KR('PgUp','pageup'),KR('PgDn','pagedown'),K('PrtSc','printscreen'));
-  f.classList.add('scroll');box.append(f);
+  box.append(R(KR('←','left'),KR('↑','up'),KR('↓','down'),KR('→','right'),B('◀ Tab',()=>keys(['ctrl','shift','tab'])),B('Tab ▶',()=>keys(['ctrl','tab']))));
+  // Tombol yang jarang dipakai (geser ke bawah)
+  box2.append(R(K('Home','home'),K('End','end'),KR('PgUp','pageup'),KR('PgDn','pagedown'),K('PrtSc','printscreen'),K('Ins','insert')));
+  box2.append(R(...[1,2,3,4,5,6].map(i=>K('F'+i,'f'+i))));
+  box2.append(R(...[7,8,9,10,11,12].map(i=>K('F'+i,'f'+i))));
+  box2.append(R(B('Alt+Tab',()=>keys(['alt','tab'])),B('Task View',()=>keys(['win','tab'])),B('Desktop ◀',()=>keys(['ctrl','win','left'])),B('Desktop ▶',()=>keys(['ctrl','win','right']))));
 }
 tx.addEventListener('input',()=>{ // kirim selisih ketikan secara real-time
   let v=tx.value;
