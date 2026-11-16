@@ -22,6 +22,36 @@ All versions are on the [Releases](https://github.com/Ceryann/PC-Remote/releases
 
 > Windows SmartScreen may show an "unrecognized app" warning for a new .exe file. Click **More info**, then **Run anyway**.
 
+## Is it safe?
+
+PCRemote.exe can control your laptop's mouse and keyboard, so it is fair to want to check that it is safe first. Here are the facts:
+
+- **Open source.** All the code is in this repository (`server.py` and `index.html`) and you can read it yourself. Nothing is hidden.
+- **Built from that code.** The `PCRemote.exe` in every release is built automatically by GitHub Actions from the code in this repository. You can see the process in the **Actions** tab and in `.github/workflows/build.yml`.
+- **No internet, no account, no tracking.** The program only serves phones on your local network. There is no telemetry, no ads, and nothing is sent out. Your settings are stored in your own phone's browser.
+- **Access is locked by a token.** Every time it starts, the program creates a new random token. Only a phone that opens the link or QR code with that token is accepted.
+
+### Why do Windows or my antivirus show a warning?
+
+A new `.exe` that Windows does not know yet often triggers SmartScreen. Programs packaged with PyInstaller are also sometimes flagged by antivirus software by mistake (a *false positive*). The warning is not proof that the program is harmful, but you are free to check it yourself:
+
+1. **Check the file hash.** Every release includes a `PCRemote.exe.sha256` file. In PowerShell run `Get-FileHash .\PCRemote.exe -Algorithm SHA256` and make sure the result matches the content of that `.sha256` file.
+2. **Upload it to [VirusTotal](https://www.virustotal.com)** to be scanned by many antivirus engines at once.
+3. **Or run it from source** with no `.exe` at all (see **For developers**).
+
+### Why run as administrator?
+
+Windows only allows an administrator program to send input to games, Task Manager, and other windows that also run as administrator. The program does not use these rights for anything else.
+
+### Limits you should know about
+
+- **The connection is not encrypted.** The phone and the laptop talk over plain HTTP/WebSocket. Use it only on a network you trust, such as your home Wi-Fi or your own hotspot. Do not use it on public Wi-Fi, because other people on the same network could see the token. Allow the Firewall for **Private networks** only.
+- **Do not share the link or the QR code.** It contains the token. Anyone who has it while the program is running can control your laptop. Close PCRemote.exe when you are not using it.
+- **Administrator rights.** Because the program runs as administrator, the input it sends has the same rights. One more reason to close it when you are done.
+- **The ViGEmBus driver** is made by a third party ([nefarius/ViGEmBus](https://github.com/nefarius/ViGEmBus), open source) and is only needed for the **Controller** tab. If you do not use the Controller, you do not need to install it.
+
+Found a security problem? Report it through the **Issues** tab of this repository.
+
 ## Quick start
 
 > **Important:** run PCRemote.exe with **Run as administrator**. Without administrator rights, Windows blocks input to games, Task Manager, and other windows that run as administrator, so the touchpad and keyboard will not work there. Tip: to avoid right-clicking every time, right-click the file, choose **Properties**, open the **Compatibility** tab, tick **Run this program as an administrator**, then click **OK**.
