@@ -48,6 +48,7 @@ Halaman **Touchpad** berisi area touchpad yang besar di atas. Di bawahnya ada ko
 | 2 jari tap | Klik kanan |
 | 2 jari geser | Scroll (atas-bawah dan kiri-kanan) |
 | 2 jari pinch | Zoom (Ctrl + scroll) |
+| Roda scroll (strip di sisi kanan touchpad) | Geser naik/turun = scroll seperti roda mouse, tap = klik tengah |
 | 3 jari tap | Klik tengah |
 | 3 jari geser kiri / kanan | Pindah tab browser (tab berikutnya / sebelumnya, Ctrl+Tab) |
 | 3 jari geser atas / bawah | Task View / Tampilkan desktop |
@@ -89,7 +90,7 @@ Halaman **Touchpad** berisi area touchpad yang besar di atas. Di bawahnya ada ko
 
 ### Pengaturan
 
-Sensitivitas kursor, kecepatan scroll, deadzone analog, ukuran semua tombol controller, dan durasi getaran (0 = mati). Semua disimpan di HP dan bertahan antar sesi.
+Sensitivitas kursor, kecepatan scroll, deadzone analog, ukuran semua tombol controller, durasi getaran (0 = mati), dan arah roda scroll (seperti mouse atau seperti layar sentuh). Semua disimpan di HP dan bertahan antar sesi.
 
 ### Dua HP sekaligus
 
