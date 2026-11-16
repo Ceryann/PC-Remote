@@ -22,6 +22,36 @@ Semua versi ada di halaman [Releases](https://github.com/Ceryann/PC-Remote/relea
 
 > Windows SmartScreen bisa menampilkan peringatan "tidak dikenal" untuk file .exe baru. Pilih **More info**, lalu **Run anyway**.
 
+## Apakah ini aman?
+
+PCRemote.exe bisa mengendalikan mouse dan keyboard laptopmu, jadi wajar kalau kamu ingin memastikannya aman dulu. Berikut faktanya:
+
+- **Open source.** Seluruh kode ada di repo ini (`server.py` dan `index.html`) dan bisa kamu baca sendiri. Tidak ada bagian yang disembunyikan.
+- **Dibangun dari kode itu.** `PCRemote.exe` di setiap rilis dibangun otomatis oleh GitHub Actions dari kode di repo ini. Prosesnya bisa kamu lihat di tab **Actions** dan di file `.github/workflows/build.yml`.
+- **Tanpa internet, tanpa akun, tanpa pelacakan.** Program hanya melayani HP di jaringan lokal. Tidak ada telemetri, iklan, atau pengiriman data ke luar. Pengaturanmu disimpan di browser HP-mu sendiri.
+- **Akses dikunci token.** Setiap kali dijalankan, program membuat token acak yang baru. Hanya HP yang membuka link atau QR dengan token itu yang diterima.
+
+### Kenapa Windows atau antivirus memberi peringatan?
+
+File `.exe` baru yang belum dikenal Windows sering memicu SmartScreen. Program yang dibungkus dengan PyInstaller juga kadang ditandai antivirus secara keliru (*false positive*). Peringatan itu bukan bukti program berbahaya, tapi kamu berhak memeriksanya sendiri:
+
+1. **Periksa hash file.** Setiap rilis menyertakan file `PCRemote.exe.sha256`. Di PowerShell, jalankan `Get-FileHash .\PCRemote.exe -Algorithm SHA256`, lalu pastikan hasilnya sama dengan isi file `.sha256` itu.
+2. **Unggah ke [VirusTotal](https://www.virustotal.com)** untuk dipindai oleh banyak antivirus sekaligus.
+3. **Atau jalankan dari kode sumber** tanpa `.exe` sama sekali (lihat bagian **Untuk pengembang**).
+
+### Kenapa harus Run as administrator?
+
+Windows hanya mengizinkan program ber-hak administrator mengirim input ke game, Task Manager, dan jendela lain yang juga berjalan sebagai administrator. Program ini tidak memakai hak itu untuk hal lain.
+
+### Batasan yang perlu kamu tahu
+
+- **Sambungan tidak dienkripsi.** HP dan laptop berkomunikasi lewat HTTP/WebSocket biasa. Pakai hanya di jaringan yang kamu percaya, seperti Wi-Fi rumah atau hotspot sendiri. Jangan dipakai di Wi-Fi publik, karena orang di jaringan yang sama bisa mengintip token. Izinkan Firewall hanya untuk **Private networks**.
+- **Jangan bagikan link atau QR-nya.** Isinya token. Siapa pun yang memilikinya selama program berjalan bisa mengendalikan laptopmu. Tutup PCRemote.exe kalau sedang tidak dipakai.
+- **Hak administrator.** Karena program dijalankan sebagai administrator, input yang dikirim punya hak yang sama. Satu alasan lagi untuk menutupnya setelah selesai.
+- **Driver ViGEmBus** dibuat pihak ketiga ([nefarius/ViGEmBus](https://github.com/nefarius/ViGEmBus), open source) dan hanya dibutuhkan untuk tab **Controller**. Kalau tidak memakai Controller, tidak perlu dipasang.
+
+Menemukan masalah keamanan? Laporkan lewat tab **Issues** di repo ini.
+
 ## Mulai cepat
 
 > **Penting:** jalankan PCRemote.exe dengan **Run as administrator**. Tanpa hak administrator, Windows memblokir input ke game, Task Manager, dan jendela lain yang berjalan sebagai administrator, sehingga touchpad dan keyboard tidak berfungsi di sana. Tips: agar tidak perlu klik kanan setiap kali, klik kanan file, pilih **Properties**, buka tab **Compatibility**, centang **Run this program as an administrator**, lalu **OK**.
