@@ -13,12 +13,15 @@ nav{display:flex;gap:6px;padding:6px;background:var(--card)}
 nav button{flex:1;min-width:0;padding:11px 2px;border:0;border-radius:8px;background:var(--btn);color:inherit;font:inherit;font-size:13px}
 nav button.on{background:var(--acc);color:#07121f;font-weight:600}
 .view{display:none;flex:1;min-height:0}.view.on{display:flex}
-#pad{flex:none;position:relative;height:46vh;min-height:230px;margin:8px;border-radius:14px;border:1px solid #2b3039;background:#14171b;display:flex;align-items:center;justify-content:center;text-align:center;color:#69717f;padding:16px;font-size:12.5px;line-height:1.7}
+#padwrap{position:relative;flex:none;height:46vh;min-height:230px;margin:8px}
+#pad{height:100%;position:relative;border-radius:14px;border:1px solid #2b3039;background:#14171b;display:flex;align-items:center;justify-content:center;text-align:center;color:#69717f;padding:16px 78px 16px 16px;font-size:12.5px;line-height:1.7}
 #v-pad{flex-direction:column;overflow-y:auto;touch-action:pan-y}
 #kbp{flex:none;padding:0 8px 16px;display:flex;flex-direction:column;gap:6px}
 #kbp,#kbp *{touch-action:pan-y}
 #kbp #txt{touch-action:auto}
 #kbp .row button{padding:11px 0}
+#wheel{position:absolute;right:10px;top:50%;height:25%;min-height:84px;transform:translateY(-50%);width:54px;border-radius:14px;background-color:#1d2128;border:1px solid #343b47;background-image:repeating-linear-gradient(to bottom,#323946 0,#323946 2px,transparent 2px,transparent 14px)}
+#wheel::before{content:"";position:absolute;inset:0;border-radius:14px;background:linear-gradient(to bottom,#14171b,transparent 18%,transparent 82%,#14171b);pointer-events:none}
 #gst{position:absolute;left:0;right:0;bottom:10px;opacity:0;transition:opacity .2s;color:var(--acc);font-size:14px;font-weight:600;pointer-events:none}
 .hint2{color:#69717f;font-size:13px;margin-top:10px}
 #txt{width:100%;background:var(--card);color:inherit;border:1px solid #2b3039;border-radius:8px;padding:10px;font:inherit;-webkit-user-select:text;user-select:text;touch-action:auto;resize:none}
@@ -75,7 +78,7 @@ body.edit .c{outline:2px dashed var(--warn)}
 <div id="app">
 <div id="stw"><span id="st"></span><span id="stt">Reconnecting</span></div>
 <nav><button data-v="pad" class="on">Touchpad</button><button data-v="gp">Controller</button><button data-v="sys">Sistem</button><button data-v="set">Pengaturan</button></nav>
-<section class="view on" id="v-pad"><div id="pad">1 jari: geser = kursor, tap = klik kiri, tahan lalu geser = drag<br>2 jari: tap = klik kanan, geser = scroll, pinch = zoom<br>3 jari: tap = klik tengah, geser kiri/kanan = pindah tab, atas = Task View<br>4 jari: tap = tampilkan desktop, geser kiri/kanan = pindah jendela (Alt+Tab)<div id="gst"></div></div><div id="kbp"><div class="hint">Ketuk kotak lalu ketik dengan keyboard HP. Enter mengosongkan kotak.</div><textarea id="txt" rows="2" enterkeyhint="send" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea><div id="keys"></div><div class="hint2">Tombol lainnya</div><div id="keys2"></div></div></section>
+<section class="view on" id="v-pad"><div id="padwrap"><div id="pad">1 jari: geser = kursor, tap = klik kiri, tahan lalu geser = drag<br>2 jari: tap = klik kanan, geser = scroll, pinch = zoom<br>3 jari: tap = klik tengah, geser kiri/kanan = pindah tab, atas = Task View<br>4 jari: tap = tampilkan desktop, geser kiri/kanan = pindah jendela (Alt+Tab)<br>Roda di kanan: geser = scroll, tap = klik tengah<div id="gst"></div></div><div id="wheel"></div></div><div id="kbp"><div class="hint">Ketuk kotak lalu ketik dengan keyboard HP. Enter mengosongkan kotak.</div><textarea id="txt" rows="2" enterkeyhint="send" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea><div id="keys"></div><div class="hint2">Tombol lainnya</div><div id="keys2"></div></div></section>
 <section class="view" id="v-gp"><div id="gp"><div id="gpbar"><div class="ed" id="gpPre"></div><button id="bEdit">Atur tata letak</button><button class="ed" id="bMinus">Tombol −</button><button class="ed" id="bPlus">Tombol +</button><button class="ed" id="bAllMinus">Semua −</button><button class="ed" id="bAllPlus">Semua +</button><button class="ed" id="bDyn"></button><button class="ed" id="bDel">Hapus preset</button><button class="ed" id="bReset">Reset</button><button id="bExit">Keluar</button></div></div></section>
 <section class="view" id="v-sys"></section><section class="view" id="v-set"></section>
 </div>
@@ -83,7 +86,7 @@ body.edit .c{outline:2px dashed var(--warn)}
 <script>
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],cl=v=>Math.max(0,Math.min(100,v));
 const token=new URLSearchParams(location.search).get('token')||'';
-const DEF={sens:1.6,scroll:1,dead:.12,size:1,layout:{},sizes:{},dyn:true,vib:12};
+const DEF={sens:1.6,scroll:1,dead:.12,size:1,layout:{},sizes:{},dyn:true,vib:12,wheelInv:false};
 let S;try{S={...DEF,...JSON.parse(localStorage.getItem('prc')||'{}')}}catch(e){S={...DEF}}
 // Preset tata letak: S.layout/S.sizes/S.size selalu milik preset aktif; save() menyalinnya ke preset.
 if(!Array.isArray(S.presets)||!S.presets.length){S.presets=[{layout:S.layout||{},sizes:S.sizes||{},size:S.size||1},{layout:{},sizes:{},size:1}];S.cur=0}
@@ -156,23 +159,25 @@ function swipe(n,tx,ty){ // geser 3/4 jari: dijalankan begitu jaraknya cukup, ta
   else{keys(['win','d']);flash('Tampilkan desktop')}
 }
 pad.addEventListener('touchstart',e=>{
-  e.preventDefault();settle();const n=e.touches.length;
-  if(!T)T={t0:Date.now(),max:0,tx:0,ty:0,moved:false,drag:false,fired:false,z:0,zt:0};
-  T.max=Math.max(T.max,n);T.n=n;T.c=cen(e.touches);T.d=n===2?dist(e.touches):0;
+  e.preventDefault();settle();const n=e.targetTouches.length;
+  if(!T)T={t0:Date.now(),max:0,tx:0,ty:0,moved:false,drag:false,fired:false,z:0,zt:0,st:0,mode:''};
+  T.max=Math.max(T.max,n);T.n=n;T.c=cen(e.targetTouches);T.d=n===2?dist(e.targetTouches):0;
   clearTimeout(T.lp);
   if(n===1)T.lp=setTimeout(()=>{if(!T.moved&&T.n===1){T.drag=true;send({t:'down',b:'l'});navigator.vibrate&&navigator.vibrate(20)}},400);
 },{passive:false});
 pad.addEventListener('touchmove',e=>{
   e.preventDefault();if(!T)return;
-  const n=e.touches.length,c=cen(e.touches),dx=c.x-T.c.x,dy=c.y-T.c.y;
+  const n=e.targetTouches.length,c=cen(e.targetTouches),dx=c.x-T.c.x,dy=c.y-T.c.y;
   T.c=c;T.tx+=dx;T.ty+=dy;
   if(Math.hypot(T.tx,T.ty)>(T.max>=3?14:8)){T.moved=true;clearTimeout(T.lp)}
   if(T.max>=3&&n>=3&&!T.fired&&Math.hypot(T.tx,T.ty)>45){T.fired=true;swipe(T.max,T.tx,T.ty)}
   if(n===1&&T.max===1){acc.x+=dx*S.sens;acc.y+=dy*S.sens;if(!raf)raf=requestAnimationFrame(flush)}
   else if(n===2&&T.max===2){
-    const d=dist(e.touches),pd=d-T.d;T.d=d;T.zt+=Math.abs(pd);if(T.zt>8)T.moved=true;
-    if(Math.abs(pd)>Math.abs(dx)+Math.abs(dy)){T.z+=pd;if(Math.abs(T.z)>10){send({t:'zoom',d:T.z>0?120:-120});T.z=0}}
-    else{
+    const d=dist(e.targetTouches),pd=d-T.d;T.d=d;T.zt+=Math.abs(pd);T.st+=Math.abs(dx)+Math.abs(dy);if(T.zt>8)T.moved=true;
+    // Mode dikunci sekali di awal gestur: zoom hanya bila jarak antar jari berubah jauh lebih besar daripada gerakan geser
+    if(!T.mode&&T.zt+T.st>14)T.mode=T.zt>T.st*1.5?'zoom':'scroll';
+    if(T.mode==='zoom'){T.z+=pd;if(Math.abs(T.z)>10){send({t:'zoom',d:T.z>0?120:-120});T.z=0}}
+    else if(T.mode==='scroll'){
       sc.x+=-dx*S.scroll*6;sc.y+=dy*S.scroll*6;
       const ix=Math.trunc(sc.x),iy=Math.trunc(sc.y);sc.x-=ix;sc.y-=iy;
       if(ix||iy)send({t:'scroll',dx:ix,dy:iy});
@@ -181,7 +186,7 @@ pad.addEventListener('touchmove',e=>{
 },{passive:false});
 pad.addEventListener('touchend',e=>{
   e.preventDefault();if(!T)return;
-  if(e.touches.length){T.c=cen(e.touches);T.n=e.touches.length;T.d=T.n===2?dist(e.touches):0;return}
+  if(e.targetTouches.length){T.c=cen(e.targetTouches);T.n=e.targetTouches.length;T.d=T.n===2?dist(e.targetTouches):0;return}
   clearTimeout(T.lp);flush();
   if(T.drag)send({t:'up',b:'l'});
   else if(!T.fired&&!T.moved&&Date.now()-T.t0<(T.max>=3?400:300)){
@@ -191,6 +196,23 @@ pad.addEventListener('touchend',e=>{
   T=null;
 },{passive:false});
 pad.addEventListener('touchcancel',()=>{if(T){clearTimeout(T.lp);if(T.drag)send({t:'up',b:'l'});T=null}});
+
+/* ---- roda scroll (seperti roda mouse) di sisi kanan touchpad ---- */
+const wheel=$('#wheel');let wp=null,wbg=0;
+wheel.addEventListener('pointerdown',e=>{wheel.setPointerCapture(e.pointerId);wp={id:e.pointerId,y:e.clientY,t0:Date.now(),moved:0,acc:0}});
+wheel.addEventListener('pointermove',e=>{
+  if(!wp||e.pointerId!==wp.id)return;
+  const dy=e.clientY-wp.y;wp.y=e.clientY;wp.moved+=Math.abs(dy);
+  wbg+=dy;wheel.style.backgroundPositionY=wbg+'px'; // garis-garis ikut berputar
+  wp.acc+=(S.wheelInv?dy:-dy)*S.scroll*8; // seperti mouse: jari naik = scroll ke atas
+  const n=Math.trunc(wp.acc);if(n){wp.acc-=n;send({t:'scroll',dx:0,dy:n})}
+});
+const wend=e=>{
+  if(!wp||e.pointerId!==wp.id)return;
+  if(e.type==='pointerup'&&wp.moved<6&&Date.now()-wp.t0<250){send({t:'click',b:'m'});flash('Klik tengah')}
+  wp=null;
+};
+wheel.addEventListener('pointerup',wend);wheel.addEventListener('pointercancel',wend);
 
 /* ---- keyboard: ketik pakai keyboard HP; tombol laptop di bawah touchpad ---- */
 const mods=new Set(),tx=$('#txt'),SENT='\u200B';let prev='';
@@ -443,6 +465,9 @@ const dynB=document.createElement('button');dynB.className='act';
 const drawDyn=()=>{const t='Analog: '+(S.dyn?'Dinamis':'Tetap');dynB.textContent=t+' (ketuk untuk ganti)';$('#bDyn').textContent=t;document.body.classList.toggle('nodyn',!S.dyn)};
 const togDyn=()=>{S.dyn=!S.dyn;save();drawDyn()};
 dynB.onclick=$('#bDyn').onclick=togDyn;drawDyn();$('#v-set').append(dynB);
+const wB=document.createElement('button');wB.className='act';
+const drawW=()=>{wB.textContent='Roda scroll: '+(S.wheelInv?'seperti layar sentuh':'seperti mouse')+' (ketuk untuk ganti)'};
+wB.onclick=()=>{S.wheelInv=!S.wheelInv;save();drawW()};drawW();$('#v-set').append(wB);
 act('Atur posisi tombol controller',()=>{show('gp');setEdit(true)});
 act('Reset UI controller ke default',e=>{const b=e.target;resetUI();b.textContent='Sudah direset ✓';setTimeout(()=>b.textContent='Reset UI controller ke default',1500)});
 
