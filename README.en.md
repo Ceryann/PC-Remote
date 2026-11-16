@@ -48,6 +48,7 @@ The **Touchpad** page has a large touchpad area at the top. Below it are a text 
 | 2 finger tap | Right click |
 | 2 finger swipe | Scroll (vertical and horizontal) |
 | 2 finger pinch | Zoom (Ctrl + scroll) |
+| Scroll wheel (strip on the right side of the touchpad) | Slide up/down = scroll like a mouse wheel, tap = middle click |
 | 3 finger tap | Middle click |
 | 3 finger swipe left / right | Switch browser tab (next / previous, Ctrl+Tab) |
 | 3 finger swipe up / down | Task View / Show desktop |
@@ -89,7 +90,7 @@ The **Touchpad** page has a large touchpad area at the top. Below it are a text 
 
 ### Settings (tab **Pengaturan**)
 
-Cursor sensitivity, scroll speed, analog deadzone, size of all controller buttons, and haptic duration (0 = off). Everything is stored on the phone and kept between sessions.
+Cursor sensitivity, scroll speed, analog deadzone, size of all controller buttons, haptic duration (0 = off), and the scroll wheel direction (like a mouse or like a touchscreen). Everything is stored on the phone and kept between sessions.
 
 ### Two phones at once
 
