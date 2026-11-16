@@ -4,6 +4,11 @@ on:
   workflow_dispatch:   # tombol "Run workflow" manual
   push:
     branches: [main]
+  release:
+    types: [published]  # saat Release dibuat di GitHub, .exe otomatis dilampirkan
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -43,7 +48,24 @@ jobs:
           $site = python -c "import site; print(site.getsitepackages()[0])"
           pyinstaller --onefile --name PCRemote --add-data "index.html;." --add-data "$site\vgamepad;vgamepad" --collect-submodules uvicorn server.py
 
+      - name: Hitung SHA256
+        shell: pwsh
+        run: |
+          $h = (Get-FileHash dist/PCRemote.exe -Algorithm SHA256).Hash.ToLower()
+          "$h  PCRemote.exe" | Out-File -Encoding ascii dist/PCRemote.exe.sha256
+          "SHA256 PCRemote.exe: $h" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+
       - uses: actions/upload-artifact@v4
         with:
           name: PCRemote
-          path: dist/PCRemote.exe
+          path: |
+            dist/PCRemote.exe
+            dist/PCRemote.exe.sha256
+
+      - name: Lampirkan ke Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/PCRemote.exe
+            dist/PCRemote.exe.sha256
